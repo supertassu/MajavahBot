@@ -19,6 +19,9 @@ class MediawikiApi:
     def get_page(self, page_name: str) -> pywikibot.Page:
         return pywikibot.Page(self.site, page_name)
 
+    def get_user(self, user_name) -> pywikibot.User:
+        return pywikibot.User(self.site, user_name)
+
     def get_page_change_stream(self, page_name: str, allow_bots: bool = False) -> EventStreams:
         stream = site_rc_listener(self.site)
         stream.register_filter(title=page_name)
@@ -37,6 +40,13 @@ class MediawikiApi:
         if len(response) > 0:
             return response[0]
         return None
+
+    def is_filter_private(self, filter_id: str) -> bool:
+        self.site.login()
+        request = api.Request(self.site, action="query", list="abusefilters", abfstartid=filter_id, abfendid=filter_id,
+                              abflimit=1, abfshow="private")
+        response = request.submit()['query']['abusefilters']
+        return len(response) > 0
 
 
 mediawiki_api = MediawikiApi()
