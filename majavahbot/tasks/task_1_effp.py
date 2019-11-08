@@ -1,8 +1,9 @@
 from majavahbot.api import MediawikiApi, get_mediawiki_api
 from majavahbot.tasks import Task, task_registry
-from majavahbot.config import effpr_page_name, effpr_filter_log_format, effpr_page_title_regex
+from majavahbot.config import effpr_page_name, effpr_filter_log_format, effpr_section_header_regex, \
+    effpr_page_title_regex, effpr_closed_strings
 from dateutil import parser
-from re import search, sub
+from re import search, sub, compile
 import datetime
 
 
@@ -12,10 +13,12 @@ class EffpTask(Task):
 
     Subtasks are:
      a) If page name is missing, fill it in if possible, notify otherwise
-     b) If filter is private, add a notification about that
+     b) If page name is wrong in a very obvious way (eg. lowercase), correct it
+     c) If filter is private, add a notification about that
+     d) If user is blocked, add a notification about that
     """
 
-    """Used to locate page name from """
+    """Used to locate page name from a sectopn"""
 
     def locate_page_name(self, section):
         results = search(section, effpr_page_title_regex)
@@ -29,6 +32,9 @@ class EffpTask(Task):
             return None
         return results
 
+    def is_closed(self, section):
+        return any(string.lower() in section.lower() for string in effpr_closed_strings)
+
     """Used to overall process a new section added to the page"""
 
     def process_new_report(self, section: str, user_name: str, api: MediawikiApi):
@@ -39,8 +45,6 @@ class EffpTask(Task):
 
         new_section = section
         edit_summary = []
-
-        user = api.get_user(user_name)
 
         last_hit = api.get_last_abuse_filter_trigger(user_name)
 
@@ -57,10 +61,15 @@ class EffpTask(Task):
 
         if last_hit is not None:
             last_hit_filter_id = last_hit['filter_id']
+            last_hit_page_title = last_hit['title']
 
             # subtask a: if page title is missing, add it
-            if page_title is None:
-                last_hit_page_title = last_hit['title']
+            # subtask b: correct very obvious spelling mistakes in page titles (currently only case)
+            page_title_missing = page_title is None
+            page_title_obviously_wrong = page_title != last_hit_page_title and page_title is not None and \
+                                         last_hit_page_title is not None and page_title.lower() == last_hit_page_title.lower()
+
+            if page_title_missing or page_title_obviously_wrong:
                 last_hit_filter_log = effpr_filter_log_format % api.get_page(last_hit_page_title).title(as_url=True)
 
                 new_section = sub(
@@ -69,68 +78,123 @@ class EffpTask(Task):
                     last_hit_filter_log + " filter log]</span>)\n",
                     new_section
                 )
-                new_section += ":{{EFFP|n}} No affected page was specified, bot added last triggered page. ~~~~\n"
-                edit_summary.append("Add affected page name (task 1a)")
 
-            # subtask b: notify if filter is private
+                if page_title_missing:
+                    new_section += ":{{EFFP|n}} No affected page was specified, bot added last triggered page. ~~~~\n"
+                    edit_summary.append("Add affected page name (task 1a)")
+                elif page_title_obviously_wrong:
+                    new_section += ":{{EFFP|n}} Bot corrected spelling of affected page title ~~~~\n"
+                    edit_summary.append("Fix affected page name (task 1b)")
+                else:
+                    raise Exception
+
+            # subtask c: notify if filter is private
             if api.is_filter_private(last_hit_filter_id):
                 new_section += ":{{EFFP|p}} ~~~~\n"
-                edit_summary.append("Add private filter notice (task 1b)")
+                edit_summary.append("Add private filter notice (task 1c)")
         elif page_title is None:
             new_section += ":{{EFFP|n}} No filters triggered, page title not specified. ~~~~\n"
             edit_summary.append("Notify that no filters were triggered when a page title is not specified. (task 1a)")
 
         if new_section != section:
-            print("updating")
-            # print("old section ", section)
             print("new section ", new_section)
             print("edit summary", ', '.join(edit_summary))
-            return new_section, ', '.join(edit_summary)
+            return new_section, edit_summary
+        return section, []
 
-        return None
+    def process_existing_report(self, section: str, user_name: str, api: MediawikiApi):
+        if not section.endswith("\n"):
+            section += "\n"
+
+        new_section = section
+        edit_summary = []
+
+        user = api.get_user(user_name)
+
+        # subtask d: notify if blocked
+        if user.isBlocked():
+            blocked_by = user.getprops()['blockedby']
+            new_section += ":{{EFFP|b|%s|%s}} ~~~~\n" % (user.username, blocked_by)
+            edit_summary.append("Notify if user is blocked. (task 1d)")
+
+        if new_section != section:
+            print("new section ", new_section)
+            print("edit summary", ', '.join(edit_summary))
+            return new_section, edit_summary
+        return section, []
+
+    def get_sections(self, page: str) -> tuple:
+        section_header_pattern = compile(effpr_section_header_regex)
+        sections = []
+
+        matches = list(section_header_pattern.finditer(page))
+
+        if len(matches) == 0:
+            return '', []
+
+        for i in range(len(matches)):
+            match = matches[i]
+            end = matches[i + 1].start() - 1 if i < (len(matches) - 1) else len(page)
+            sections.append((match.group(1), page[match.start():end]))
+
+        return page[:matches[0].start() - 1], sections
+
+    def process_page(self, page: str, api: MediawikiApi):
+        page = api.get_page(page)
+        page.get(force=True)
+
+        rev_iterator = page.revisions(content=True, total=2)
+        current_text = next(rev_iterator)['text']
+        old_text = next(rev_iterator)['text']
+
+        old_preface, old_sections = self.get_sections(old_text)
+        current_preface, current_sections = self.get_sections(current_text)
+
+        if len(old_sections) > len(current_sections):
+            # assuming something was just archived or un-done, not doing anything
+            return
+
+        save = False
+        summary = ''
+
+        section_texts = []
+
+        for i in range(len(current_sections)):
+            section_user = current_sections[i][0]
+            section_text = current_sections[i][1]
+
+            if not self.is_closed(section_text):
+                print("Processing section by", section_user)
+
+                new_text = section_text
+                new_summaries = []
+                if i >= len(old_sections):
+                    new_text, new_summaries = self.process_new_report(new_text, section_user, api)
+                new_text, existing_summaries = self.process_existing_report(new_text, section_user, api)
+
+                if new_text != section_text:
+                    section_texts.append(new_text)
+                    summary += section_user + ": " + ', '.join(new_summaries + existing_summaries) + ". "
+                    save = True
+            else:
+                section_texts.append(section_text)
+
+        if save:
+            new_text = current_preface + "".join(section_texts)
+            page.text = new_text
+            page.save(summary)
 
     def run(self):
         api = get_mediawiki_api()
 
-        # print(api.get_last_abuse_filter_trigger("Admin"))
-        print(api.get_last_abuse_filter_trigger("Tyyppi"))
-
-        sample_report = """
-==Tyyppi==
-;Username
-: [[User:Tyyppi|Tyyppi]] ([[User talk:Tyyppi|talk]] '''·''' [[Special:Contribs/Tyyppi|contribs]]) (<span class="plainlinks">[//en.wikipedia.org/wiki/Special:AbuseLog?title=Special:AbuseLog&wpSearchUser=Tyyppi filter log]</span>)
-;Page you were editing
-: Page not specified
-;Description
-: 
-;Date and time
-: 14:34, 6 November 2019 (UTC)
-;Comments
-<!-- Please leave this area blank for now, but be prepared to answer questions left by reviewing editors. Thanks! -->
-"""
-
-        print(sample_report)
-        print(self.process_new_report(sample_report, "Tyyppi", api))
-
-        # foo bar
-        if True:
+        try:
+            stream = api.get_page_change_stream(effpr_page_name)
+        except:
+            self.process_page(effpr_page_name, api)
             return
 
-        page = api.get_page(effpr_page_name)
-        stream = api.get_page_change_stream(effpr_page_name)
-        if not page.exists():
-            print("Page does not exist")
-            return
         for change in stream:
-            # refresh page data
-            new_revision_id = change['revision']['new']
-            user = change['user']
-            page.get(force=True)
-            print("change       ", change)
-            print("change id    ", new_revision_id)
-            print("new wiki text", page.text)
-            print("revision     ", page.latest_revision)
-            print("")
+            self.process_page(effpr_page_name, api)
         print("the end")
 
 
