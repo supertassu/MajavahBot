@@ -1,6 +1,9 @@
-family = 'wikipedia'
-mylang = 'test'
+family = 'vagrant'
+mylang = 'en'
 
-usernames[family][mylang] = u'MajavahBot'
+if family == "vagrant":
+    usernames[family][mylang] = u"Admin"
+else:
+    usernames[family][mylang] = u'MajavahBot'
 
 password_file = "user-password.py"
