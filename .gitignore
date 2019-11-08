@@ -1,0 +1,7 @@
+user-password.py
+throttle.ctrl
+pywikibot.lwp
+venv/
+apicache-py3/
+/.idea
+*.pyc
