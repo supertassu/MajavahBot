@@ -1,7 +1,7 @@
 from majavahbot.api import MediawikiApi, get_mediawiki_api
 from majavahbot.tasks import Task, task_registry
 from majavahbot.config import effpr_page_name, effpr_filter_log_format, effpr_section_header_regex, \
-    effpr_page_title_regex, effpr_closed_strings
+    effpr_page_title_regex, effpr_page_title_wrong_format_regexes, effpr_closed_strings
 from dateutil import parser
 from re import search, sub, compile
 import datetime
@@ -18,7 +18,7 @@ class EffpTask(Task):
      d) If user is blocked, add a notification about that
     """
 
-    """Used to locate page name from a sectopn"""
+    """Used to locate page name from a sectipn"""
 
     def locate_page_name(self, section):
         results = search(section, effpr_page_title_regex)
@@ -30,7 +30,7 @@ class EffpTask(Task):
 
         if page_name == 'Page not specified':
             return None
-        return results
+        return page_name
 
     def is_closed(self, section):
         return any(string.lower() in section.lower() for string in effpr_closed_strings)
@@ -66,8 +66,17 @@ class EffpTask(Task):
             # subtask a: if page title is missing, add it
             # subtask b: correct very obvious spelling mistakes in page titles (currently only case)
             page_title_missing = page_title is None
-            page_title_obviously_wrong = page_title != last_hit_page_title and page_title is not None and \
-                                         last_hit_page_title is not None and page_title.lower() == last_hit_page_title.lower()
+            page_title_obviously_wrong = False
+
+            if last_hit_page_title != page_title and not page_title_missing:
+                if last_hit_page_title is not None and page_title is not None:
+                    if last_hit_page_title.lower() == page_title.lower():
+                        page_title_obviously_wrong = True
+
+                wrong_spelling = search(effpr_page_title_wrong_format_regexes, page_title)
+                if wrong_spelling is not None:
+                    if wrong_spelling.group(1).lower() == last_hit_page_title.lower():
+                        page_title_obviously_wrong = True
 
             if page_title_missing or page_title_obviously_wrong:
                 last_hit_filter_log = effpr_filter_log_format % api.get_page(last_hit_page_title).title(as_url=True)
@@ -83,7 +92,7 @@ class EffpTask(Task):
                     new_section += ":{{EFFP|n}} No affected page was specified, bot added last triggered page. ~~~~\n"
                     edit_summary.append("Add affected page name (task 1a)")
                 elif page_title_obviously_wrong:
-                    new_section += ":{{EFFP|n}} Bot corrected spelling of affected page title ~~~~\n"
+                    new_section += ":{{EFFP|n}} Bot corrected spelling or formatting of affected page title ~~~~\n"
                     edit_summary.append("Fix affected page name (task 1b)")
                 else:
                     raise Exception
@@ -97,8 +106,6 @@ class EffpTask(Task):
             edit_summary.append("Notify that no filters were triggered when a page title is not specified. (task 1a)")
 
         if new_section != section:
-            print("new section ", new_section)
-            print("edit summary", ', '.join(edit_summary))
             return new_section, edit_summary
         return section, []
 
@@ -118,8 +125,6 @@ class EffpTask(Task):
             edit_summary.append("Notify if user is blocked. (task 1d)")
 
         if new_section != section:
-            print("new section ", new_section)
-            print("edit summary", ', '.join(edit_summary))
             return new_section, edit_summary
         return section, []
 
