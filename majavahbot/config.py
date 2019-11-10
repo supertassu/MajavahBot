@@ -1,3 +1,7 @@
+from pywikibot import config
+
+use_tools_database = config.family != "vagrant"
+
 # effpr_page_name = 'Wikipedia:Edit filter/False Positives/Reports'
 effpr_page_name = 'Test Page'
 effpr_filter_log_format = '//en.wikipedia.org/wiki/Special:AbuseLog?title=Special:AbuseLog&wpSearchTitle=%s'
@@ -16,3 +20,12 @@ effpr_closed_strings = (
     "{{effp|v}}", "{{effp|denied}}",
     "{{effp|b|", "{{effp|b}}", "{{effp|blocked",
 )
+
+if use_tools_database:
+    own_db_hostname = "tools.db.svc.eqiad.wmflabs"
+    own_db_option_file = "~/replica.my.cnf"
+    own_db_database = "s54198__majavahbot"
+else:
+    own_db_hostname = "localhost"
+    own_db_option_file = "local.my.cnf"
+    own_db_database = "majavahbot"

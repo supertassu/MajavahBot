@@ -1,8 +1,11 @@
+from majavahbot.api import task_database
 from majavahbot.tasks import task_registry
-from majavahbot.api import get_mediawiki_api
 
+task_database.request()
 task_registry.add_all_tasks()
-print(get_mediawiki_api())
+task_database.init()
+task_database.close()
 
 for task in task_registry.get_tasks():
-    task.run()
+    pass
+    # task.run()

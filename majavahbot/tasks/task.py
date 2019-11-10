@@ -1,3 +1,4 @@
+from majavahbot.api import task_database
 from importlib import import_module
 import os
 
@@ -6,6 +7,7 @@ class Task:
     def __init__(self, number, name):
         self.number = number
         self.name = name
+        task_database.insert_task(self.number, self.name)
 
     def __repr__(self):
         return "Task(number=" + str(self.number) + ",name=" + self.name + ")"

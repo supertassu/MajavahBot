@@ -18,9 +18,8 @@ class EffpTask(Task):
      d) If user is blocked, add a notification about that
     """
 
-    """Used to locate page name from a sectipn"""
-
     def locate_page_name(self, section):
+        """Used to locate page name from a section"""
         results = search(section, effpr_page_title_regex)
 
         if results is None:
@@ -35,9 +34,8 @@ class EffpTask(Task):
     def is_closed(self, section):
         return any(string.lower() in section.lower() for string in effpr_closed_strings)
 
-    """Used to overall process a new section added to the page"""
-
     def process_new_report(self, section: str, user_name: str, api: MediawikiApi):
+        """Used to process a new section added to the page"""
         page_title = self.locate_page_name(section)
 
         if not section.endswith("\n"):
@@ -110,6 +108,7 @@ class EffpTask(Task):
         return section, []
 
     def process_existing_report(self, section: str, user_name: str, api: MediawikiApi):
+        """Used to process an existing section"""
         if not section.endswith("\n"):
             section += "\n"
 
@@ -129,6 +128,7 @@ class EffpTask(Task):
         return section, []
 
     def get_sections(self, page: str) -> tuple:
+        """Parses a page and returns all sections in it"""
         section_header_pattern = compile(effpr_section_header_regex)
         sections = []
 
@@ -145,6 +145,7 @@ class EffpTask(Task):
         return page[:matches[0].start() - 1], sections
 
     def process_page(self, page: str, api: MediawikiApi):
+        """Processes the EFFPR page"""
         page = api.get_page(page)
         page.get(force=True)
 
@@ -192,13 +193,14 @@ class EffpTask(Task):
     def run(self):
         api = get_mediawiki_api()
 
+        # if change streams are available for that page, use it; otherwise just process it once
         try:
             stream = api.get_page_change_stream(effpr_page_name)
         except:
             self.process_page(effpr_page_name, api)
             return
 
-        for change in stream:
+        for _ in stream:
             self.process_page(effpr_page_name, api)
         print("the end")
 
