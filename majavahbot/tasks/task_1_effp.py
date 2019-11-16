@@ -1,7 +1,6 @@
 from majavahbot.api import MediawikiApi, get_mediawiki_api
 from majavahbot.tasks import Task, task_registry
-from majavahbot.config import effpr_page_name, effpr_filter_log_format, effpr_section_header_regex, \
-    effpr_page_title_regex, effpr_page_title_wrong_format_regexes, effpr_closed_strings
+from majavahbot.config import effpr_config_page
 from dateutil import parser
 from re import search, sub, compile
 import datetime
@@ -18,9 +17,13 @@ class EffpTask(Task):
      d) If user is blocked, add a notification about that
     """
 
+    def __init__(self, number, name):
+        super().__init__(number, name)
+        self.stream = None
+
     def locate_page_name(self, section):
         """Used to locate page name from a section"""
-        results = search(section, effpr_page_title_regex)
+        results = search(section, self.get_task_configuration('page_title_regex'))
 
         if results is None:
             return None
@@ -32,7 +35,8 @@ class EffpTask(Task):
         return page_name
 
     def is_closed(self, section):
-        return any(string.lower() in section.lower() for string in effpr_closed_strings)
+        return any(string.lower() in section.lower() for string in
+                   self.get_task_configuration('section_closed_strings'))
 
     def process_new_report(self, section: str, user_name: str, api: MediawikiApi):
         """Used to process a new section added to the page"""
@@ -71,16 +75,17 @@ class EffpTask(Task):
                     if last_hit_page_title.lower() == page_title.lower():
                         page_title_obviously_wrong = True
 
-                wrong_spelling = search(effpr_page_title_wrong_format_regexes, page_title)
+                wrong_spelling = search(self.get_task_configuration('page_title_wrong_formats'), page_title)
                 if wrong_spelling is not None:
                     if wrong_spelling.group(1).lower() == last_hit_page_title.lower():
                         page_title_obviously_wrong = True
 
             if page_title_missing or page_title_obviously_wrong:
-                last_hit_filter_log = effpr_filter_log_format % api.get_page(last_hit_page_title).title(as_url=True)
+                last_hit_filter_log = self.get_task_configuration('abuse_log_format') \
+                                      % api.get_page(last_hit_page_title).title(as_url=True)
 
                 new_section = sub(
-                    effpr_page_title_regex,
+                    self.get_task_configuration('page_title_regex'),
                     ";Page you were editing\n: [[" + last_hit_page_title + "]] (<span class=\"plainlinks\">[" +
                     last_hit_filter_log + " filter log]</span>)\n",
                     new_section
@@ -129,7 +134,7 @@ class EffpTask(Task):
 
     def get_sections(self, page: str) -> tuple:
         """Parses a page and returns all sections in it"""
-        section_header_pattern = compile(effpr_section_header_regex)
+        section_header_pattern = compile(self.get_task_configuration('section_header'))
         sections = []
 
         matches = list(section_header_pattern.finditer(page))
@@ -191,18 +196,23 @@ class EffpTask(Task):
             page.save(summary)
 
     def run(self):
+        self.register_task_configuration(effpr_config_page)
         api = get_mediawiki_api()
 
         # if change streams are available for that page, use it; otherwise just process it once
         try:
-            stream = api.get_page_change_stream(effpr_page_name)
+            self.stream = api.get_page_change_stream(self.get_task_configuration('reports_page'))
         except:
-            self.process_page(effpr_page_name, api)
+            self.process_page(self.get_task_configuration('reports_page'), api)
             return
 
-        for _ in stream:
-            self.process_page(effpr_page_name, api)
-        print("the end")
+        for _ in self.stream:
+            self.process_page(self.get_task_configuration('reports_page'), api)
+        print("EventStream dried")  # auto restart?
+
+    def task_configuration_reloaded(self, old, new):
+        if old['reports_page'] != new['reports_page']:
+            self.stream = []  # dry stream
 
 
 task_registry.add_task(EffpTask(1, 'EFFP helper'))
