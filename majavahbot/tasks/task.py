@@ -1,5 +1,7 @@
 from majavahbot.api import task_database, get_mediawiki_api
 from importlib import import_module
+from datetime import datetime
+from typing import Optional
 import json
 import os
 import re
@@ -11,6 +13,8 @@ class Task:
         self.name = name
         self.task_configuration = {}
         task_database.insert_task(self.number, self.name)
+        self.approved = task_database.is_approved(self.number)
+        self.trial = task_database.get_trial(self.number)
 
     def __repr__(self):
         return "Task(number=" + str(self.number) + ",name=" + self.name + ")"
@@ -18,6 +22,31 @@ class Task:
     def run(self):
         raise Exception("Not implemented yet")
 
+    def should_use_bot_flag(self):
+        return self.approved
+
+    def should_edit(self):
+        if self.trial is not None:
+            if self.trial['max_edits'] and self.trial['edits_done'] >= self.trial['max_edits']:
+                self.trial = None
+                print("DEBUG: Trial was completed; max edit count reached")
+                return False
+            if self.trial['max_days'] >= 0 and (datetime.now() - self.trial['created_at']).total_seconds() \
+                    > (self.trial['max_days'] * 86400):
+                self.trial = None
+                print("DEBUG: Trial was completed; time ran out")
+                return False
+            return True
+            
+        return self.approved
+
+    def record_trial_edit(self):
+        if self.trial is None:
+            raise
+
+        self.trial['edits_done'] += 1
+        task_database.record_trial_edit(self.trial['id'])
+        
     def task_configuration_reloaded(self, old, new):
         pass
 
@@ -53,6 +82,12 @@ class TaskRegistry:
 
     def get_tasks(self):
         return self.tasks
+
+    def get_task_by_number(self, number: int) -> Optional[Task]:
+        for task in self.get_tasks():
+            if task.number == number:
+                return task
+        return None
 
     def add_all_tasks(self):
         for module in os.listdir(os.path.dirname(__file__)):

@@ -150,6 +150,10 @@ class EffpTask(Task):
         return page[:matches[0].start() - 1], sections
 
     def process_page(self, page: str, api: MediawikiApi):
+        if not self.should_edit():
+            print("Should not edit; not editing")
+            return
+
         """Processes the EFFPR page"""
         page = api.get_page(page)
         page.get(force=True)
@@ -190,10 +194,11 @@ class EffpTask(Task):
             else:
                 section_texts.append(section_text)
 
-        if save:
+        if save and self.should_edit():
             new_text = current_preface + "".join(section_texts)
             page.text = new_text
-            page.save(summary)
+            page.save(summary, minor=False, botflag=self.should_use_bot_flag())
+            self.record_trial_edit()
 
     def run(self):
         self.register_task_configuration(effpr_config_page)
