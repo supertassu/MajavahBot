@@ -1,4 +1,4 @@
-from majavahbot.api import task_database
+from majavahbot.api import task_database, get_mediawiki_api
 from majavahbot.tasks import task_registry
 import argparse
 from sys import exit
@@ -18,6 +18,11 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def cli_whoami():
+    api = get_mediawiki_api()
+    print("I am %s" % api)
 
 
 def cli_task_list():
@@ -48,6 +53,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='subparser')
 
+    whoami_parser = subparsers.add_parser('whoami')
     task_list_parser = subparsers.add_parser('task_list')
 
     task_parser = subparsers.add_parser('task')

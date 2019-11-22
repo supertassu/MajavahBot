@@ -2,7 +2,7 @@ family = 'vagrant'
 mylang = 'en'
 
 if family == "vagrant":
-    usernames[family][mylang] = u"Admin"
+    usernames[family][mylang] = u"MajavahBotti"
 else:
     usernames[family][mylang] = u'MajavahBot'
 

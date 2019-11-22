@@ -15,6 +15,7 @@ class EffpTask(Task):
      b) If page name is wrong in a very obvious way (eg. lowercase), correct it
      c) If filter is private, add a notification about that
      d) If user is blocked, add a notification about that
+     e) Archive
     """
 
     def __init__(self, number, name):
@@ -50,18 +51,17 @@ class EffpTask(Task):
 
         last_hit = api.get_last_abuse_filter_trigger(user_name)
 
-        if last_hit is None:
-            new_section += ":{{EFFP|n}} No filters triggered. ~~~~\n"
-            edit_summary.append("Notify that no filters were triggered (task 1a)")
-
-        # If filter was triggered more than 2 hours ago, assume it is not the one being reported
+        # If filter was triggered more than 3 hours ago, assume it is not the one being reported
         if last_hit is not None:
             last_hit_timestamp = last_hit['timestamp']
             last_hit_datetime = parser.parse(last_hit_timestamp)
-            if (datetime.datetime.now(tz=datetime.timezone.utc) - last_hit_datetime).total_seconds() > 3600 * 2:
+            if (datetime.datetime.now(tz=datetime.timezone.utc) - last_hit_datetime).total_seconds() > 3600 * 3:
                 last_hit = None
 
-        if last_hit is not None:
+        if last_hit is None:
+            new_section += ":{{EFFP|nofilterstriggered|bot=1}} ~~~~\n"
+            edit_summary.append("Notify that no filters were triggered (task 1a)")
+        else:
             last_hit_filter_id = last_hit['filter_id']
             last_hit_page_title = last_hit['title']
 
@@ -92,21 +92,18 @@ class EffpTask(Task):
                 )
 
                 if page_title_missing:
-                    new_section += ":{{EFFP|n}} No affected page was specified, bot added last triggered page. ~~~~\n"
+                    new_section += ":{{EFFP|pagenameadded|bot=1}} ~~~~\n"
                     edit_summary.append("Add affected page name (task 1a)")
                 elif page_title_obviously_wrong:
-                    new_section += ":{{EFFP|n}} Bot corrected spelling or formatting of affected page title ~~~~\n"
+                    new_section += ":{{EFFP|pagenamefixed|bot=1}} ~~~~\n"
                     edit_summary.append("Fix affected page name (task 1b)")
                 else:
-                    raise Exception
+                    raise
 
             # subtask c: notify if filter is private
             if api.is_filter_private(last_hit_filter_id):
-                new_section += ":{{EFFP|p}} ~~~~\n"
+                new_section += ":{{EFFP|p|bot=1}} ~~~~\n"
                 edit_summary.append("Add private filter notice (task 1c)")
-        elif page_title is None:
-            new_section += ":{{EFFP|n}} No filters triggered, page title not specified. ~~~~\n"
-            edit_summary.append("Notify that no filters were triggered when a page title is not specified. (task 1a)")
 
         if new_section != section:
             return new_section, edit_summary
@@ -125,7 +122,7 @@ class EffpTask(Task):
         # subtask d: notify if blocked
         if user.isBlocked():
             blocked_by = user.getprops()['blockedby']
-            new_section += ":{{EFFP|b|%s|%s}} ~~~~\n" % (user.username, blocked_by)
+            new_section += ":{{EFFP|b|%s|%s|bot=1}} ~~~~\n" % (user.username, blocked_by)
             edit_summary.append("Notify if user is blocked. (task 1d)")
 
         if new_section != section:
@@ -145,9 +142,9 @@ class EffpTask(Task):
         for i in range(len(matches)):
             match = matches[i]
             end = matches[i + 1].start() - 1 if i < (len(matches) - 1) else len(page)
-            sections.append((match.group(1), page[match.start():end]))
+            sections.append((match.group(1), page[match.start():end] + "\n"))
 
-        return page[:matches[0].start() - 1], sections
+        return page[:matches[0].start() - 1] + "\n", sections
 
     def process_page(self, page: str, api: MediawikiApi):
         if not self.should_edit():
@@ -172,6 +169,7 @@ class EffpTask(Task):
         save = False
         summary = ''
 
+        archived_sections = []
         section_texts = []
 
         for i in range(len(current_sections)):
@@ -187,18 +185,50 @@ class EffpTask(Task):
                     new_text, new_summaries = self.process_new_report(new_text, section_user, api)
                 new_text, existing_summaries = self.process_existing_report(new_text, section_user, api)
 
-                if new_text != section_text:
+                if self.should_archive(new_text, api):
+                    summary += section_user + ": archive section (task 1e). "
+                    archived_sections.append(new_text)
+                    save = True
+                elif new_text != section_text:
                     section_texts.append(new_text)
                     summary += section_user + ": " + ', '.join(new_summaries + existing_summaries) + ". "
                     save = True
+            elif self.should_archive(section_text, api):
+                summary += section_user + ": archive section (task 1e). "
+                archived_sections.append(section_text)
+                save = True
             else:
                 section_texts.append(section_text)
 
         if save and self.should_edit():
+            if len(archived_sections) > 0:
+                self.add_to_archive_page(self.get_task_configuration('rolling_archive_page_name'),
+                                         self.get_task_configuration('rolling_archive_max_sections'),
+                                         archived_sections, api)
+
             new_text = current_preface + "".join(section_texts)
             page.text = new_text
             page.save(summary, minor=False, botflag=self.should_use_bot_flag())
             self.record_trial_edit()
+
+    def add_to_archive_page(self, archive_page_name: str, max_threads: int, new_sections: list, api: MediawikiApi):
+        archive_page = api.get_page(archive_page_name)
+        header, sections = self.get_sections(archive_page.text)
+
+        for section in new_sections:
+            sections.append(('', section))
+
+        if len(sections) > max_threads:
+            sections = sections[0 - max_threads:]
+
+        section_texts = []
+        for section in sections:
+            section_texts.append(section[1])
+
+        summary = "Add %s archived sections (task 1e)" % len(new_sections)
+        archive_page.text = header + "".join(section_texts)
+        archive_page.save(summary, minor=False, botflag=self.should_use_bot_flag())
+        self.record_trial_edit()
 
     def run(self):
         self.register_task_configuration(effpr_config_page)
@@ -207,17 +237,36 @@ class EffpTask(Task):
         # if change streams are available for that page, use it; otherwise just process it once
         try:
             self.stream = api.get_page_change_stream(self.get_task_configuration('reports_page'))
+            print("Now listening for EFFPR edits")
+            for change in self.stream:
+                if '!nobot!' not in change['comment']:
+                    self.process_page(self.get_task_configuration('reports_page'), api)
+            print("EventStream dried")  # auto restart?
         except:
+            print("Can't subscribe to EFFPR report page, just processing it once")
             self.process_page(self.get_task_configuration('reports_page'), api)
             return
 
-        for _ in self.stream:
-            self.process_page(self.get_task_configuration('reports_page'), api)
-        print("EventStream dried")  # auto restart?
-
     def task_configuration_reloaded(self, old, new):
-        if old['reports_page'] != new['reports_page']:
+        if 'reports_page' in old and old['reports_page'] != new['reports_page']:
             self.stream = []  # dry stream
+
+    def should_archive(self, text: str, api: MediawikiApi) -> bool:
+        last_reply = api.get_last_reply(text)
+        no_resolution_time = self.get_task_configuration('no_resolution_archive_time')
+        lowertext = text.lower()
+
+        delay_found = False
+        shortest_found_delay = 2419200  # 4 weeks, should be long enough
+        delays = self.get_task_configuration('archive_delays')
+
+        for key, value in delays.items():
+            if key in lowertext:
+                delay_found = True
+                shortest_found_delay = value if value < shortest_found_delay else shortest_found_delay
+
+        seconds_to_wait = shortest_found_delay if delay_found else no_resolution_time
+        return (datetime.datetime.now(tz=datetime.timezone.utc) - last_reply).total_seconds() > seconds_to_wait
 
 
 task_registry.add_task(EffpTask(1, 'EFFP helper'))

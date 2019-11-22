@@ -1,6 +1,12 @@
+import re
 import pywikibot
+import dateparser
+from datetime import datetime
 from pywikibot.data import api
 from pywikibot.comms.eventstreams import EventStreams, site_rc_listener
+
+
+SIGNATURE_TIME_REGEX = re.compile(r"\d\d:\d\d, \d{1,2} \w*? \d\d\d\d \(UTC\)")
 
 
 class MediawikiApi:
@@ -8,7 +14,9 @@ class MediawikiApi:
         self.site = pywikibot.Site()
 
     def __repr__(self):
-        return "MediawikiApi{wiki=%s,user=%s}" % (self.site.hostname(), self.site.username())
+        self.site.login()
+        return "MediawikiApi{wiki=%s,user=%s,has_bot_flag=%s}" % (self.site.hostname(), self.site.username(),
+                                                                  'bot' in self.site.userinfo['rights'])
 
     def test(self):
         return pywikibot.User(self.site, self.site.username()).exists()
@@ -47,6 +55,13 @@ class MediawikiApi:
                               abflimit=1, abfshow="private")
         response = request.submit()['query']['abusefilters']
         return len(response) > 0
+
+    def get_last_reply(self, section: str):
+        # example: 22:25, 11 September 2019 (UTC)
+        date_strings = SIGNATURE_TIME_REGEX.findall(section)
+        dates = list(map(dateparser.parse, date_strings))
+        dates = sorted(dates)
+        return dates[-1] if len(dates) > 0 else None
 
 
 mediawiki_api = MediawikiApi()

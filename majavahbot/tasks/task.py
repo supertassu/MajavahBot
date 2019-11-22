@@ -12,6 +12,8 @@ class Task:
         self.number = number
         self.name = name
         self.task_configuration = {}
+        self.task_configuration_page = None
+        self.task_configuration_last_loaded = None
         task_database.insert_task(self.number, self.name)
         self.approved = task_database.is_approved(self.number)
         self.trial = task_database.get_trial(self.number)
@@ -42,7 +44,7 @@ class Task:
 
     def record_trial_edit(self):
         if self.trial is None:
-            raise
+            return
 
         self.trial['edits_done'] += 1
         task_database.record_trial_edit(self.trial['id'])
@@ -51,24 +53,24 @@ class Task:
         pass
 
     def _load_task_configuration(self, contents: str):
-        config = json.loads(re.sub("//.*", "", contents, flags=re.MULTILINE))
+        config_text = re.sub(r"[\n ]//.*", "", contents, flags=re.MULTILINE)
+        config = json.loads(config_text)
         self.task_configuration_reloaded(self.task_configuration, config)
         self.task_configuration = config
+        self.task_configuration_last_loaded = datetime.now()
 
     def register_task_configuration(self, config_page_name: str):
+        self.task_configuration_page = config_page_name
         api = get_mediawiki_api()
         page = api.get_page(config_page_name)
         self._load_task_configuration(page.text)
 
-        try:
-            stream = api.get_page_change_stream(page, True)
-            for _ in stream:
-                page.get(force=True)
-                self._load_task_configuration(page.text)
-        except:
-            print("Task configuration can't be reloaded")
-
     def get_task_configuration(self, key: str):
+        if (datetime.now() - self.task_configuration_last_loaded).total_seconds() > 60 * 15:
+            api = get_mediawiki_api()
+            page = api.get_page(self.task_configuration_page)
+            self._load_task_configuration(page.text)
+
         # TODO: support for nested keys
         return self.task_configuration[key]
 
