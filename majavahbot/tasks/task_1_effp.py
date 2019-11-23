@@ -256,6 +256,11 @@ class EffpTask(Task):
         no_resolution_time = self.get_task_configuration('no_resolution_archive_time')
         lowertext = text.lower()
 
+        keep_texts = self.get_task_configuration('archive_blockers')
+        for value in keep_texts:
+            if value in lowertext:
+                return False
+
         delay_found = False
         shortest_found_delay = 2419200  # 4 weeks, should be long enough
         delays = self.get_task_configuration('archive_delays')
