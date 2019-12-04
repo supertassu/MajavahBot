@@ -202,14 +202,18 @@ class EffpTask(Task):
 
         if save and self.should_edit():
             if len(archived_sections) > 0:
+                print("Saving archived sections, len =", len(archived_sections))
                 self.add_to_archive_page(self.get_task_configuration('rolling_archive_page_name'),
                                          self.get_task_configuration('rolling_archive_max_sections'),
                                          archived_sections, api)
 
+            print("Saving, edit summary =", summary)
             new_text = current_preface + "".join(section_texts)
             page.text = new_text
             page.save(summary, minor=False, botflag=self.should_use_bot_flag())
             self.record_trial_edit()
+        else:
+            print("Not saving. save =", save)
 
     def add_to_archive_page(self, archive_page_name: str, max_threads: int, new_sections: list, api: MediawikiApi):
         archive_page = api.get_page(archive_page_name)
@@ -237,15 +241,16 @@ class EffpTask(Task):
         # if change streams are available for that page, use it; otherwise just process it once
         try:
             self.stream = api.get_page_change_stream(self.get_task_configuration('reports_page'))
-            print("Now listening for EFFPR edits")
-            for change in self.stream:
-                if '!nobot!' not in change['comment']:
-                    self.process_page(self.get_task_configuration('reports_page'), api)
-            print("EventStream dried")  # auto restart?
         except:
             print("Can't subscribe to EFFPR report page, just processing it once")
             self.process_page(self.get_task_configuration('reports_page'), api)
             return
+
+        print("Now listening for EFFPR edits")
+        for change in self.stream:
+            if '!nobot!' not in change['comment']:
+                self.process_page(self.get_task_configuration('reports_page'), api)
+        print("EventStream dried")  # auto restart?
 
     def task_configuration_reloaded(self, old, new):
         if 'reports_page' in old and old['reports_page'] != new['reports_page']:

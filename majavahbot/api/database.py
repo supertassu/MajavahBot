@@ -56,6 +56,10 @@ class TaskDatabase:
     def get_trial(self, number):
         results = self.execute("select * from task_trials where task_id = %s "
                                "order by created_at desc limit 1", (number, ))
+
+        if results is None:
+            return None
+
         results = {
             'id': results[0],
             'task_id': results[1],
