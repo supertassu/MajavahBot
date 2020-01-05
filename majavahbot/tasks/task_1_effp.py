@@ -137,7 +137,7 @@ class EffpTask(Task):
         matches = list(section_header_pattern.finditer(page))
 
         if len(matches) == 0:
-            return '', []
+            return page, []
 
         for i in range(len(matches)):
             match = matches[i]
@@ -207,6 +207,11 @@ class EffpTask(Task):
                                          self.get_task_configuration('rolling_archive_max_sections'),
                                          archived_sections, api)
 
+            write_page_name = self.get_task_configuration('page_to_write_reports')
+            if isinstance(write_page_name, str) and write_page_name != "":
+                print("Writing to page ", write_page_name, "instead of reports page")
+                page = api.get_page(write_page_name)
+
             print("Saving, edit summary =", summary)
             new_text = current_preface + "".join(section_texts)
             page.text = new_text
@@ -238,12 +243,14 @@ class EffpTask(Task):
         self.register_task_configuration(effpr_config_page)
         api = get_mediawiki_api()
 
+        print("Processing page once")
+        self.process_page(self.get_task_configuration('reports_page'), api)
+
         # if change streams are available for that page, use it; otherwise just process it once
         try:
             self.stream = api.get_page_change_stream(self.get_task_configuration('reports_page'))
         except:
-            print("Can't subscribe to EFFPR report page, just processing it once")
-            self.process_page(self.get_task_configuration('reports_page'), api)
+            print("Can't subscribe to EFFPR report page")
             return
 
         print("Now listening for EFFPR edits")

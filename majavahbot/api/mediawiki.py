@@ -1,7 +1,6 @@
 import re
 import pywikibot
 import dateparser
-from datetime import datetime
 from pywikibot.data import api
 from pywikibot.comms.eventstreams import EventStreams, site_rc_listener
 
