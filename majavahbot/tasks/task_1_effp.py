@@ -67,7 +67,7 @@ class EffpTask(Task):
 
             # subtask a: if page title is missing, add it
             # subtask b: correct very obvious spelling mistakes in page titles (currently only case)
-            page_title_missing = page_title is None
+            page_title_missing = page_title is None or len(page_title) == 0
             page_title_obviously_wrong = False
 
             if last_hit_page_title != page_title and not page_title_missing:
@@ -146,6 +146,39 @@ class EffpTask(Task):
 
         return page[:matches[0].start() - 1] + "\n", sections
 
+    def create_edit_summary(self, archived_sections: list, given_summaries: dict) -> str:
+        processed_sections = list(given_summaries.keys())
+        process_reasons = {}
+
+        for section_name, actions in given_summaries.items():
+            for action in actions:
+                if action not in actions:
+                    actions[action] = [section_name]
+                else:
+                    actions[action].append(section_name)
+
+        summary = []
+
+        if len(processed_sections) == 1:
+            if len(process_reasons.keys()) <= 3:
+                summary.append("Processed section " + processed_sections[0] + ": "
+                               + (", ".join(process_reasons.keys())))
+            else:
+                summary.append("Processed section " + processed_sections[0])
+        elif len(processed_sections) > 1:
+            if len(process_reasons.keys()) == 1:
+                reason = list(process_reasons.keys())[0]
+                summary.append("Process " + str(len(processed_sections)) + "sections (" + reason + ")")
+            else:
+                summary.append("Process " + str(len(processed_sections)) + "sections")
+
+        if len(archived_sections) > 1:
+            summary.append("Archive " + str(len(archived_sections)) + " sections")
+        elif len(archived_sections) > 0:
+            summary.append("Archive section " + archived_sections[0])
+
+        return ", ".join(summary)
+
     def process_page(self, page: str, api: MediawikiApi):
         if not self.should_edit():
             print("Should not edit; not editing")
@@ -167,7 +200,7 @@ class EffpTask(Task):
             return
 
         save = False
-        summary = ''
+        summaries = {}
 
         archived_sections = []
         section_texts = []
@@ -186,15 +219,13 @@ class EffpTask(Task):
                 new_text, existing_summaries = self.process_existing_report(new_text, section_user, api)
 
                 if self.should_archive(new_text, api):
-                    summary += section_user + ": archive section (task 1e). "
                     archived_sections.append(new_text)
                     save = True
                 elif new_text != section_text:
                     section_texts.append(new_text)
-                    summary += section_user + ": " + ', '.join(new_summaries + existing_summaries) + ". "
+                    summaries[section_user] = new_summaries + existing_summaries
                     save = True
             elif self.should_archive(section_text, api):
-                summary += section_user + ": archive section (task 1e). "
                 archived_sections.append(section_text)
                 save = True
             else:
@@ -212,6 +243,7 @@ class EffpTask(Task):
                 print("Writing to page ", write_page_name, "instead of reports page")
                 page = api.get_page(write_page_name)
 
+            summary = self.create_edit_summary(archived_sections, summaries)
             print("Saving, edit summary =", summary)
             new_text = current_preface + "".join(section_texts)
             page.text = new_text

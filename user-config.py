@@ -7,3 +7,4 @@ else:
     usernames[family][mylang] = u'MajavahBot'
 
 password_file = "user-password.py"
+verbose_output = True
