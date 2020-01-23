@@ -152,10 +152,10 @@ class EffpTask(Task):
 
         for section_name, actions in given_summaries.items():
             for action in actions:
-                if action not in actions:
-                    actions[action] = [section_name]
+                if action not in process_reasons:
+                    process_reasons[action] = [section_name]
                 else:
-                    actions[action].append(section_name)
+                    process_reasons[action].append(section_name)
 
         summary = []
 
@@ -177,7 +177,7 @@ class EffpTask(Task):
         elif len(archived_sections) > 0:
             summary.append("Archive section " + archived_sections[0])
 
-        return ", ".join(summary)
+        return "Bot clerking: " + ", ".join(summary)
 
     def process_page(self, page: str, api: MediawikiApi):
         if not self.should_edit():
