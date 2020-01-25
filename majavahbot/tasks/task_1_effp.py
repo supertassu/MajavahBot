@@ -24,7 +24,7 @@ class EffpTask(Task):
 
     def locate_page_name(self, section):
         """Used to locate page name from a section"""
-        results = search(section, self.get_task_configuration('page_title_regex'))
+        results = search(self.get_task_configuration('page_title_regex'), section)
 
         if results is None:
             return None
@@ -59,8 +59,9 @@ class EffpTask(Task):
                 last_hit = None
 
         if last_hit is None:
-            new_section += ":{{EFFP|nofilterstriggered|bot=1}} ~~~~\n"
-            edit_summary.append("Notify that no filters were triggered (task 1a)")
+            if page_title is None:
+                new_section += ":{{EFFP|nofilterstriggered|bot=1}} ~~~~\n"
+                edit_summary.append("Notify that no filters were triggered (task 1a)")
         else:
             last_hit_filter_id = last_hit['filter_id']
             last_hit_page_title = last_hit['title']
