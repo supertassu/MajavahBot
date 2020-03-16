@@ -39,7 +39,7 @@ class Task:
                 print("DEBUG: Trial was completed; time ran out")
                 return False
             return True
-            
+
         return self.approved
 
     def record_trial_edit(self):
@@ -48,7 +48,7 @@ class Task:
 
         self.trial['edits_done'] += 1
         task_database.record_trial_edit(self.trial['id'])
-        
+
     def task_configuration_reloaded(self, old, new):
         pass
 

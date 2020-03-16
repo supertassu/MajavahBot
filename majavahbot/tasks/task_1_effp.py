@@ -169,9 +169,9 @@ class EffpTask(Task):
         elif len(processed_sections) > 1:
             if len(process_reasons.keys()) == 1:
                 reason = list(process_reasons.keys())[0]
-                summary.append("Process " + str(len(processed_sections)) + "sections (" + reason + ")")
+                summary.append("Process " + str(len(processed_sections)) + " sections (" + reason + ")")
             else:
-                summary.append("Process " + str(len(processed_sections)) + "sections")
+                summary.append("Process " + str(len(processed_sections)) + " sections")
 
         if len(archived_sections) > 1:
             summary.append("Archive " + str(len(archived_sections)) + " sections")
@@ -182,8 +182,10 @@ class EffpTask(Task):
 
     def process_page(self, page: str, api: MediawikiApi):
         if not self.should_edit():
-            print("Should not edit; not editing")
+            print("Should not edit; will not process page")
             return
+
+        print("Processing page %s" % page)
 
         """Processes the EFFPR page"""
         page = api.get_page(page)
@@ -198,12 +200,14 @@ class EffpTask(Task):
 
         if len(old_sections) > len(current_sections):
             # assuming something was just archived or un-done, not doing anything
+            print("Assuming something was just archived or un-done, not doing anything")
             return
 
         save = False
         summaries = {}
 
         archived_sections = []
+        archive_section_titles = []
         section_texts = []
 
         for i in range(len(current_sections)):
@@ -221,13 +225,21 @@ class EffpTask(Task):
 
                 if self.should_archive(new_text, api):
                     archived_sections.append(new_text)
+                    archive_section_titles.append(section_user)
+                    print("Will archive open section", section_user)
                     save = True
                 elif new_text != section_text:
                     section_texts.append(new_text)
+                    print("Modified open section", section_user)
                     summaries[section_user] = new_summaries + existing_summaries
                     save = True
+                else:
+                    print("Didn't modify open section", section_user)
+                    section_texts.append(new_text)
             elif self.should_archive(section_text, api):
+                print("Will archive closed section", section_user)
                 archived_sections.append(section_text)
+                archive_section_titles.append(section_user)
                 save = True
             else:
                 section_texts.append(section_text)
@@ -244,7 +256,7 @@ class EffpTask(Task):
                 print("Writing to page ", write_page_name, "instead of reports page")
                 page = api.get_page(write_page_name)
 
-            summary = self.create_edit_summary(archived_sections, summaries)
+            summary = self.create_edit_summary(archive_section_titles, summaries)
             print("Saving, edit summary =", summary)
             new_text = current_preface + "".join(section_texts)
             page.text = new_text
@@ -303,7 +315,7 @@ class EffpTask(Task):
 
         keep_texts = self.get_task_configuration('archive_blockers')
         for value in keep_texts:
-            if value in lowertext:
+            if value.lower() in lowertext:
                 return False
 
         delay_found = False
@@ -311,12 +323,14 @@ class EffpTask(Task):
         delays = self.get_task_configuration('archive_delays')
 
         for key, value in delays.items():
-            if key in lowertext:
+            if key.lower() in lowertext:
                 delay_found = True
                 shortest_found_delay = value if value < shortest_found_delay else shortest_found_delay
 
         seconds_to_wait = shortest_found_delay if delay_found else no_resolution_time
-        return (datetime.datetime.now(tz=datetime.timezone.utc) - last_reply).total_seconds() > seconds_to_wait
+        last_reply_seconds = (datetime.datetime.now(tz=datetime.timezone.utc) - last_reply).total_seconds()
+        print("Archive seconds_to_wait %s, last reply was %s, archive: %s" % (str(seconds_to_wait), str(last_reply_seconds), last_reply_seconds > seconds_to_wait))
+        return last_reply_seconds > seconds_to_wait
 
 
 task_registry.add_task(EffpTask(1, 'EFFP helper'))
