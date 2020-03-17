@@ -102,7 +102,8 @@ class EffpTask(Task):
                     raise
 
             # subtask c: notify if filter is private
-            if api.is_filter_private(last_hit_filter_id):
+            # last_hit_filter id seems to be empty when a filter is private
+            if last_hit_filter_id == "":
                 new_section += ":{{EFFP|p|bot=1}} ~~~~\n"
                 edit_summary.append("Add private filter notice (task 1c)")
 
