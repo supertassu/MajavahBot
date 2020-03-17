@@ -310,6 +310,10 @@ class EffpTask(Task):
             self.stream = []  # dry stream
 
     def should_archive(self, text: str, api: MediawikiApi) -> bool:
+        # if there is a signature in text, do not archive as it was modified in this round.
+        if "~~~~" in text:
+            return False
+
         last_reply = api.get_last_reply(text)
         no_resolution_time = self.get_task_configuration('no_resolution_archive_time')
         lowertext = text.lower()
