@@ -8,9 +8,10 @@ import re
 
 
 class Task:
-    def __init__(self, number, name):
+    def __init__(self, number, name, site):
         self.number = number
         self.name = name
+        self.site = site
         self.task_configuration = {}
         self.task_configuration_page = None
         self.task_configuration_last_loaded = None
@@ -48,6 +49,9 @@ class Task:
 
         self.trial['edits_done'] += 1
         task_database.record_trial_edit(self.trial['id'])
+
+    def get_mediawiki_api(self):
+        return get_mediawiki_api(self.site)
 
     def task_configuration_reloaded(self, old, new):
         pass

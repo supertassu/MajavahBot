@@ -3,6 +3,49 @@ from majavahbot.config import own_db_hostname, own_db_option_file, own_db_databa
 from datetime import datetime
 
 
+class ReplicaDatabase:
+    def __init__(self, db):
+        prod = own_db_hostname == "tools.db.svc.eqiad.wmflabs"
+        host = db + ".analytics.db.svc.eqiad.wmflabs" if prod else own_db_hostname
+        port = 3306 if prod else 4711
+        option_file = own_db_option_file if prod else "replica.my.cnf"
+        db = db + "_p"
+
+        self.open = 0
+        self.database = mysql.connector.connect(
+            host=host,
+            port=port,
+            option_files=option_file,
+            database=db
+        )
+
+    def request(self):
+        if self.open < 1:
+            self.database.connect()
+        self.open += 1
+
+    def close(self):
+        self.open -= 1
+        if self.open < 1:
+            self.database.disconnect()
+
+    def commit(self):
+        self.database.commit()
+
+    def execute(self, sql: str, values=(), one=False):
+        self.request()
+        cursor = self.database.cursor(buffered=True)
+        cursor.execute(sql, values)
+        if one:
+            results = cursor.fetchone()
+        else:
+            results = cursor.fetchall()
+        cursor.close()
+        self.commit()
+        self.close()
+        return results
+
+
 class TaskDatabase:
     def __init__(self):
         self.open = 0

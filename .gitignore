@@ -5,3 +5,4 @@ venv/
 apicache-py3/
 /.idea
 *.pyc
+replica.my.cnf

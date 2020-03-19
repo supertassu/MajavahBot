@@ -1,4 +1,4 @@
-from majavahbot.api import MediawikiApi, get_mediawiki_api
+from majavahbot.api import MediawikiApi
 from majavahbot.tasks import Task, task_registry
 from majavahbot.config import effpr_config_page
 from dateutil import parser
@@ -18,8 +18,8 @@ class EffpTask(Task):
      e) Archive
     """
 
-    def __init__(self, number, name):
-        super().__init__(number, name)
+    def __init__(self, number, name, site):
+        super().__init__(number, name, site)
         self.stream = None
 
     def locate_page_name(self, section):
@@ -287,7 +287,7 @@ class EffpTask(Task):
 
     def run(self):
         self.register_task_configuration(effpr_config_page)
-        api = get_mediawiki_api()
+        api = self.get_mediawiki_api()
 
         print("Processing page once")
         self.process_page(self.get_task_configuration('reports_page'), api)
@@ -338,4 +338,4 @@ class EffpTask(Task):
         return last_reply_seconds > seconds_to_wait
 
 
-task_registry.add_task(EffpTask(1, 'EFFP helper'))
+task_registry.add_task(EffpTask(1, 'EFFP helper', 'en'))

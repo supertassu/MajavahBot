@@ -4,13 +4,12 @@ import dateparser
 from pywikibot.data import api
 from pywikibot.comms.eventstreams import EventStreams, site_rc_listener
 
-
 SIGNATURE_TIME_REGEX = re.compile(r"\d\d:\d\d, \d{1,2} \w*? \d\d\d\d \(UTC\)")
 
 
 class MediawikiApi:
-    def __init__(self):
-        self.site = pywikibot.Site()
+    def __init__(self, site="en"):
+        self.site = pywikibot.Site(site)
 
     def __repr__(self):
         self.site.login()
@@ -39,6 +38,7 @@ class MediawikiApi:
         return stream
 
     """Retrieves latest Special:AbuseLog entry for specified user."""
+
     def get_last_abuse_filter_trigger(self, user: str):
         self.site.login()
         request = api.Request(self.site, action="query", list="abuselog", afluser=user, afldir="older", afllimit="1",
@@ -63,8 +63,10 @@ class MediawikiApi:
         return dates[-1] if len(dates) > 0 else None
 
 
-mediawiki_api = MediawikiApi()
+mediawiki_apis = {}
 
 
-def get_mediawiki_api():
-    return mediawiki_api
+def get_mediawiki_api(site="en"):
+    if site not in mediawiki_apis:
+        mediawiki_apis[site] = MediawikiApi(site)
+    return mediawiki_apis[site]
