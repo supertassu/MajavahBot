@@ -77,10 +77,11 @@ class EffpTask(Task):
                     if last_hit_page_title.lower() == page_title.lower():
                         page_title_obviously_wrong = True
 
-                wrong_spelling = search(self.get_task_configuration('page_title_wrong_formats'), page_title)
-                if wrong_spelling is not None:
-                    if wrong_spelling.group(1).lower() == last_hit_page_title.lower():
-                        page_title_obviously_wrong = True
+                for pattern in self.get_task_configuration('page_title_wrong_formats'):
+                    wrong_spelling = search(pattern, page_title)
+                    if wrong_spelling is not None:
+                        if wrong_spelling.group(1).lower() == last_hit_page_title.lower():
+                            page_title_obviously_wrong = True
 
             if page_title_missing or page_title_obviously_wrong:
                 last_hit_filter_log = self.get_task_configuration('abuse_log_format') \
