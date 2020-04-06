@@ -21,6 +21,7 @@ class EffpTask(Task):
     def __init__(self, number, name, site):
         super().__init__(number, name, site)
         self.stream = None
+        self.register_task_configuration(effpr_config_page)
 
     def locate_page_name(self, section):
         """Used to locate page name from a section"""
@@ -286,7 +287,6 @@ class EffpTask(Task):
         self.record_trial_edit()
 
     def run(self):
-        self.register_task_configuration(effpr_config_page)
         api = self.get_mediawiki_api()
 
         print("Processing page once")

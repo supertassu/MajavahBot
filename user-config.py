@@ -1,10 +1,10 @@
-family = 'vagrant'
+family = 'wikipedia'
 mylang = 'en'
 
-if family == "vagrant":
-    usernames[family][mylang] = u"MajavahBotti"
-else:
-    usernames[family][mylang] = u'MajavahBot'
+global usernames
+usernames["vagrant"]["en"] = "MajavahBotti"
+usernames["wikipedia"]["en"] = "MajavahBot"
+usernames["wikipedia"]["fi"] = "MajavahBot"
 
 password_file = "user-password.py"
 verbose_output = True

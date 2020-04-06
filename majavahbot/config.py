@@ -1,7 +1,7 @@
 from pywikibot import config
 from os import path
 
-use_tools_database = config.family != "vagrant"
+use_tools_database = config.family == "vagrant"
 
 effpr_config_page = 'User:MajavahBot/EFFP Helper Configuration'
 

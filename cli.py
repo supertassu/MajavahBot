@@ -30,18 +30,24 @@ def cli_task_list():
         print("Task %i (%s) on wiki %s | Approved: %s | Trial: %s | Bot flag: %s" % (task.number, task.name, task.site, str(task.approved), str(task.trial), str(task.should_use_bot_flag())))
 
 
-def cli_task(number: int, run: bool):
+def cli_task(number: int, run: bool, config: bool):
     task = task_registry.get_task_by_number(number)
     if task is None:
         print("Task not found")
         exit(1)
+
+    if config:
+        print("Task configuration for task", task.number)
+        print(task.get_task_configuration())
+        exit(0)
+        return
 
     if not task.should_edit():
         print("Task is not approved")
         exit(1)
         return
 
-    if run:
+    elif run:
         print("Starting task", task.number)
         task.run()
     else:
@@ -61,6 +67,8 @@ if __name__ == '__main__':
         'number', metavar='number', help='Task number', type=int)
     task_parser.add_argument(
         '--run', dest='run', type=str2bool, nargs='?', const=True, default=False, help='Run the task')
+    task_parser.add_argument(
+        '--config', dest='config', type=str2bool, nargs='?', const=True, default=False, help='Shows the task configuration')
 
     kwargs = vars(parser.parse_args())
     subparser = kwargs.pop('subparser')

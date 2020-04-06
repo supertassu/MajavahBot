@@ -65,15 +65,16 @@ class Task:
 
     def register_task_configuration(self, config_page_name: str):
         self.task_configuration_page = config_page_name
-        api = get_mediawiki_api()
-        page = api.get_page(config_page_name)
-        self._load_task_configuration(page.text)
 
-    def get_task_configuration(self, key: str):
-        if (datetime.now() - self.task_configuration_last_loaded).total_seconds() > 60 * 15:
+    def get_task_configuration(self, key: str = ""):
+        if self.task_configuration_last_loaded is None \
+                or (datetime.now() - self.task_configuration_last_loaded).total_seconds() > 60 * 15:
             api = get_mediawiki_api()
             page = api.get_page(self.task_configuration_page)
             self._load_task_configuration(page.text)
+
+        if len(key) == 0:
+            return self.task_configuration
 
         # TODO: support for nested keys
         return self.task_configuration[key]
