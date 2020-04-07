@@ -33,7 +33,7 @@ class FiwikiRequestedArticlesTask(Task):
 
         page_titles = requests.keys()
         format_strings = ','.join(['%s'] * len(page_titles))
-        existing_pages = replica.execute(EXISTING_PAGE_QUERY % format_strings, tuple(requests.keys()))
+        existing_pages = replica.execute(EXISTING_PAGE_QUERY % format_strings, tuple(page_titles))
 
         removed_entries = []
         new_text = text
@@ -45,8 +45,13 @@ class FiwikiRequestedArticlesTask(Task):
             removed_entries.append(existing_page)
 
         if len(removed_entries) > 0 and self.should_edit():
+            removed_length = len(removed_entries)
             if text == new_text:
                 raise RuntimeError("text == new_text but at least one entry should be removed")
+            summary = 'Botti poisti ' + (
+                (str(removed_length) + ' täytettyä artikkelitoivetta') if removed_length > 3 else
+                ('seuraavat täytetyt artikkelitoiveet: [[' + ']], [['.join(removed_entries) + ']]')
+            )
             # TODO: save
 
     def run(self):
