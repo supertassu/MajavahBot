@@ -27,10 +27,10 @@ def cli_whoami():
 
 def cli_task_list():
     for task in task_registry.get_tasks():
-        print("Task %i (%s) on wiki %s | Approved: %s | Trial: %s | Bot flag: %s" % (task.number, task.name, task.site, str(task.approved), str(task.trial), str(task.should_use_bot_flag())))
+        print(f"Task {task.number:d} ({task.name}) on wiki {task.site} | Approved: {str(task.approved)} | Trial: {str(task.trial)} | Bot flag: {str(task.should_use_bot_flag())} | Supports manual run: {str(task.supports_manual_run)}")
 
 
-def cli_task(number: int, run: bool, config: bool):
+def cli_task(number: int, run: bool, manual: bool, config: bool):
     task = task_registry.get_task_by_number(number)
     if task is None:
         print("Task not found")
@@ -50,6 +50,9 @@ def cli_task(number: int, run: bool, config: bool):
     elif run:
         print("Starting task", task.number)
         task.run()
+    elif manual:
+        print("Manually running task", task.number)
+        task.do_manual_run()
     else:
         print("Unknown action")
         exit(1)
@@ -67,6 +70,8 @@ if __name__ == '__main__':
         'number', metavar='number', help='Task number', type=int)
     task_parser.add_argument(
         '--run', dest='run', type=str2bool, nargs='?', const=True, default=False, help='Run the task')
+    task_parser.add_argument(
+        '--manual', dest='manual', type=str2bool, nargs='?', const=True, default=False, help='Manually runs the task')
     task_parser.add_argument(
         '--config', dest='config', type=str2bool, nargs='?', const=True, default=False, help='Shows the task configuration')
 

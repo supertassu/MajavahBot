@@ -12,9 +12,14 @@ class Task:
         self.number = number
         self.name = name
         self.site = site
+
+        self.supports_manual_run = False
+        self.is_manual_run = False
+
         self.task_configuration = {}
         self.task_configuration_page = None
         self.task_configuration_last_loaded = None
+
         task_database.insert_task(self.number, self.name)
         self.approved = task_database.is_approved(self.number)
         self.trial = task_database.get_trial(self.number)
@@ -24,6 +29,14 @@ class Task:
 
     def run(self):
         raise Exception("Not implemented yet")
+
+    def do_manual_run(self):
+        self.is_manual_run = True
+
+        if self.supports_manual_run:
+            self.run()
+            return
+        raise Exception("This task does not support manual runs")
 
     def should_use_bot_flag(self):
         return self.approved
