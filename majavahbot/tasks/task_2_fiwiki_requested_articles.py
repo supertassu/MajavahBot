@@ -57,7 +57,7 @@ class FiwikiRequestedArticlesTask(Task):
                 ('seuraavat täytetyt artikkelitoiveet: [[' + ']], [['.join(removed_entries) + ']]')
             )
 
-            print("Poistetaan %s toivetta sivulta %s" % (str(removed_length), page.title))
+            print("Poistetaan %s toivetta sivulta %s" % (str(removed_length), page.title(as_link=True)))
             if self.should_edit() and not self.is_manual_run or manual_run.confirm_edit():
                 page.text = new_text
                 page.save(summary, botflag=self.should_use_bot_flag())
@@ -68,6 +68,10 @@ class FiwikiRequestedArticlesTask(Task):
         replicadb.request()
 
         api = self.get_mediawiki_api()
+
+        if self.get_task_configuration("run") is not True:
+            print("Disabled in configuration")
+            return
 
         for page in self.get_task_configuration('pages'):
             print()
