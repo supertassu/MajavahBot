@@ -16,7 +16,6 @@ class FiwikiRequestedArticlesTask(Task):
         self.supports_manual_run = True
 
     def process_page(self, page: str, api: MediawikiApi, replica: ReplicaDatabase):
-        print("--- Käsitellään sivua %s" % page)
         page = api.get_page(page)
         text = page.text
         entries = list(ENTRY_REGEX.finditer(text))
@@ -40,10 +39,11 @@ class FiwikiRequestedArticlesTask(Task):
         removed_entries = []
         new_text = text
 
+        print("-- Found %s filled requests" % (str(len(existing_pages))))
         for existing_page in existing_pages:
             existing_page = existing_page[0].decode('utf-8')
             existing_page_entry = requests[existing_page]
-            print("Toive %s (%s)" % (existing_page, existing_page_entry.replace("\n", "")))
+            print("Request %s (%s)" % (existing_page, existing_page_entry.replace("\n", "")))
             if not self.is_manual_run or manual_run.confirm_with_enter():
                 new_text = new_text.replace(existing_page_entry, '')
                 removed_entries.append(existing_page)
@@ -60,7 +60,8 @@ class FiwikiRequestedArticlesTask(Task):
             print("Poistetaan %s toivetta sivulta %s" % (str(removed_length), page.title))
             if self.should_edit() and not self.is_manual_run or manual_run.confirm_edit():
                 page.text = new_text
-                # page.save(summary, botflag=self.should_use_bot_flag())
+                page.save(summary, botflag=self.should_use_bot_flag())
+                self.record_trial_edit()
 
     def run(self):
         replicadb = ReplicaDatabase("fiwiki")
@@ -69,7 +70,8 @@ class FiwikiRequestedArticlesTask(Task):
         api = self.get_mediawiki_api()
 
         for page in self.get_task_configuration('pages'):
-            print("Processing page", page)
+            print()
+            print("--- Processing page", page)
             self.process_page(page, api, replicadb)
 
         replicadb.close()

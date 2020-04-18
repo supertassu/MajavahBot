@@ -82,7 +82,7 @@ class Task:
     def get_task_configuration(self, key: str = ""):
         if self.task_configuration_last_loaded is None \
                 or (datetime.now() - self.task_configuration_last_loaded).total_seconds() > 60 * 15:
-            api = get_mediawiki_api()
+            api = self.get_mediawiki_api()
             page = api.get_page(self.task_configuration_page)
             self._load_task_configuration(page.text)
 
