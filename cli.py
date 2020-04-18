@@ -27,7 +27,9 @@ def cli_whoami():
 
 def cli_task_list():
     for task in task_registry.get_tasks():
-        print(f"Task {task.number:d} ({task.name}) on wiki {task.site} | Approved: {str(task.approved)} | Trial: {str(task.trial)} | Bot flag: {str(task.should_use_bot_flag())} | Supports manual run: {str(task.supports_manual_run)}")
+        print("Task %i (%s) on wiki %s | Approved: %s | Trial: %s | Bot flag: %s | Supports manual run: %s"
+              % (task.number, task.name, task.site, str(task.approved), str(task.trial),
+                 str(task.should_use_bot_flag()), str(task.supports_manual_run)))
 
 
 def cli_task(number: int, run: bool, manual: bool, config: bool):
