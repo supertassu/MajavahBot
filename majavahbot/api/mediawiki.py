@@ -8,8 +8,8 @@ SIGNATURE_TIME_REGEX = re.compile(r"\d\d:\d\d, \d{1,2} \w*? \d\d\d\d \(UTC\)")
 
 
 class MediawikiApi:
-    def __init__(self, site="en"):
-        self.site = pywikibot.Site(site)
+    def __init__(self, site, family):
+        self.site = pywikibot.Site(site, family)
 
     def __repr__(self):
         self.site.login()
@@ -37,9 +37,8 @@ class MediawikiApi:
 
         return stream
 
-    """Retrieves latest Special:AbuseLog entry for specified user."""
-
     def get_last_abuse_filter_trigger(self, user: str):
+        """Retrieves latest Special:AbuseLog entry for specified user."""
         self.site.login()
         request = api.Request(self.site, action="query", list="abuselog", afluser=user, afldir="older", afllimit="1",
                               aflprop="ids|user|title|action|result|timestamp|filter|details")
@@ -62,11 +61,19 @@ class MediawikiApi:
         dates = sorted(dates)
         return dates[-1] if len(dates) > 0 else None
 
+    def get_wikidata_id(self, page: pywikibot.Page):
+        item = pywikibot.ItemPage.fromPage(page)
+        if not item:
+            return None
+        return item.title()
+
 
 mediawiki_apis = {}
 
 
-def get_mediawiki_api(site="en"):
-    if site not in mediawiki_apis:
-        mediawiki_apis[site] = MediawikiApi(site)
-    return mediawiki_apis[site]
+def get_mediawiki_api(site="en", family="wikipedia") -> MediawikiApi:
+    if family not in mediawiki_apis:
+        mediawiki_apis[family] = {}
+    if site not in mediawiki_apis[family]:
+        mediawiki_apis[family][site] = MediawikiApi(site, family)
+    return mediawiki_apis[family][site]

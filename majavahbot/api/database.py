@@ -1,21 +1,19 @@
 import mysql.connector
-from majavahbot.config import own_db_hostname, own_db_option_file, own_db_database
+from majavahbot.config import analytics_db_hostname, analytics_db_option_file, analytics_db_port, \
+    own_db_hostname, own_db_option_file, own_db_database
 from datetime import datetime
 
 
 class ReplicaDatabase:
     def __init__(self, db):
-        prod = own_db_hostname == "tools.db.svc.eqiad.wmflabs"
-        host = db + ".analytics.db.svc.eqiad.wmflabs" if prod else own_db_hostname
-        port = 3306 if prod else 4711
-        option_file = own_db_option_file if prod else "replica.my.cnf"
+        host = analytics_db_hostname.replace("{DB}", db)
         db = db + "_p"
 
         self.open = 0
         self.database = mysql.connector.connect(
             host=host,
-            port=port,
-            option_files=option_file,
+            port=analytics_db_port,
+            option_files=analytics_db_option_file,
             database=db
         )
 

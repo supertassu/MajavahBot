@@ -6,3 +6,6 @@ apicache-py3/
 /.idea
 *.pyc
 replica.my.cnf
+
+# ignore local testing script
+test.py

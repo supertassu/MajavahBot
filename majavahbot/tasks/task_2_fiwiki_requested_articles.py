@@ -1,4 +1,4 @@
-from majavahbot.api import MediawikiApi, ReplicaDatabase, manual_run
+from majavahbot.api import MediawikiApi, ReplicaDatabase, manual_run, get_mediawiki_api
 from majavahbot.config import requested_articles_config_page
 from majavahbot.tasks import Task, task_registry
 from re import compile
@@ -6,6 +6,8 @@ from re import compile
 
 ENTRY_REGEX = compile(r"\n:*\*+ ?([^\n]+)")
 LOCAL_LINK_REGEX = compile(r"\[\[([^\:\]]+)\]\]")
+OTHER_WIKI_LINK_REGEX = compile(r"\[\[:?([a-z]{2,3}):([^\:|\]]+)(\|[^:\]]+)?\]\]")
+
 EXISTING_PAGE_QUERY = """
 SELECT page_title FROM page
 WHERE page_namespace = 0
@@ -49,7 +51,27 @@ class FiwikiRequestedArticlesTask(Task):
         for existing_page in existing_pages:
             existing_page = existing_page[0].decode('utf-8')
             existing_page_entry = requests[existing_page]
-            print("Request %s (%s)" % (existing_page, existing_page_entry.replace("\n", "")))
+            print("- Request %s (%s)" % (existing_page, existing_page_entry.replace("\n", "")))
+
+            local_wikidata_id = api.get_wikidata_id(api.get_page(existing_page))
+            found_wikidata_ids = set(local_wikidata_id)
+
+            other_links = list(OTHER_WIKI_LINK_REGEX.finditer(existing_page_entry))
+            for other_link in other_links:
+                other_site = get_mediawiki_api(other_link.group(1), api.get_site().family)
+                if not other_site:
+                    continue
+                other_page = other_site.get_page(other_link.group(2))
+                if not other_page:
+                    continue
+
+                other_wikidata_id = other_site.get_wikidata_id(other_page)
+                found_wikidata_ids.add(other_wikidata_id)
+
+            if len(found_wikidata_ids) != 1:
+                print("Found %s different Wikidata Q's: %s" % (len(found_wikidata_ids), ', '.join(found_wikidata_ids)))
+                continue
+
             if not self.is_manual_run or manual_run.confirm_with_enter():
                 new_text = new_text.replace(existing_page_entry, '')
                 removed_entries.append(existing_page)

@@ -1,4 +1,4 @@
-from majavahbot.api import task_database, get_mediawiki_api
+from majavahbot.api import task_database, get_mediawiki_api, MediawikiApi
 from importlib import import_module
 from datetime import datetime
 from typing import Optional
@@ -63,7 +63,7 @@ class Task:
         self.trial['edits_done'] += 1
         task_database.record_trial_edit(self.trial['id'])
 
-    def get_mediawiki_api(self):
+    def get_mediawiki_api(self) -> MediawikiApi:
         return get_mediawiki_api(self.site)
 
     def task_configuration_reloaded(self, old, new):
