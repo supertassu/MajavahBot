@@ -53,24 +53,28 @@ class FiwikiRequestedArticlesTask(Task):
             existing_page_entry = requests[existing_page]
             print("- Request %s (%s)" % (existing_page, existing_page_entry.replace("\n", "")))
 
-            local_wikidata_id = api.get_wikidata_id(api.get_page(existing_page))
-            found_wikidata_ids = set(local_wikidata_id)
-
             other_links = list(OTHER_WIKI_LINK_REGEX.finditer(existing_page_entry))
-            for other_link in other_links:
-                other_site = get_mediawiki_api(other_link.group(1), api.get_site().family)
-                if not other_site:
-                    continue
-                other_page = other_site.get_page(other_link.group(2))
-                if not other_page:
-                    continue
 
-                other_wikidata_id = other_site.get_wikidata_id(other_page)
-                found_wikidata_ids.add(other_wikidata_id)
+            if len(other_links) >= 1:
+                print("Found at least 1 link to other wiki, comparing Wikidata Q's...")
 
-            if len(found_wikidata_ids) != 1:
-                print("Found %s different Wikidata Q's: %s" % (len(found_wikidata_ids), ', '.join(found_wikidata_ids)))
-                continue
+                local_wikidata_id = api.get_wikidata_id(api.get_page(existing_page))
+                found_wikidata_ids = set(local_wikidata_id)
+
+                for other_link in other_links:
+                    other_site = get_mediawiki_api(other_link.group(1), api.get_site().family)
+                    if not other_site:
+                        continue
+                    other_page = other_site.get_page(other_link.group(2))
+                    if not other_page:
+                        continue
+
+                    other_wikidata_id = other_site.get_wikidata_id(other_page)
+                    found_wikidata_ids.add(other_wikidata_id)
+
+                if len(found_wikidata_ids) != 1:
+                    print("Found %s different Wikidata Q's: %s" % (len(found_wikidata_ids), ', '.join(found_wikidata_ids)))
+                    continue
 
             if not self.is_manual_run or manual_run.confirm_with_enter():
                 new_text = new_text.replace(existing_page_entry, '')
