@@ -6,7 +6,13 @@ from re import compile
 
 ENTRY_REGEX = compile(r"\n:*\*+ ?([^\n]+)")
 LOCAL_LINK_REGEX = compile(r"\[\[([^\:\]]+)\]\]")
-EXISTING_PAGE_QUERY = "SELECT page_title FROM page WHERE page_namespace = 0 AND page_is_redirect = 0 AND page_title IN (%s)"
+EXISTING_PAGE_QUERY = """
+SELECT page_title FROM page
+WHERE page_namespace = 0
+AND page_is_redirect = 0
+AND page_title IN (%s)
+AND NOT EXISTS (SELECT cl_from FROM categorylinks WHERE cl_from = page.page_id AND cl_to = "Täsmennyssivut")
+"""
 
 
 class FiwikiRequestedArticlesTask(Task):
