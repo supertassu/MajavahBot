@@ -1,6 +1,7 @@
 from majavahbot.api import MediawikiApi, ReplicaDatabase, manual_run, get_mediawiki_api
 from majavahbot.config import requested_articles_config_page
 from majavahbot.tasks import Task, task_registry
+from pywikibot import Page
 from re import compile
 
 
@@ -22,6 +23,32 @@ class FiwikiRequestedArticlesTask(Task):
         super().__init__(number, name, site)
         self.register_task_configuration(requested_articles_config_page)
         self.supports_manual_run = True
+
+    def compare_wikidata_qs(self, page: Page, api: MediawikiApi, other_links: list):
+        try:
+            local_wikidata_id = api.get_wikidata_id(page)
+            found_wikidata_ids = set()
+            found_wikidata_ids.add(str(local_wikidata_id))
+
+            for other_link in other_links:
+                other_site = get_mediawiki_api(other_link.group(1), api.get_site().family)
+                if not other_site:
+                    continue
+                other_page = other_site.get_page(other_link.group(2))
+                if not other_page:
+                    continue
+
+                other_wikidata_id = other_site.get_wikidata_id(other_page)
+                found_wikidata_ids.add(str(other_wikidata_id))
+
+            if len(found_wikidata_ids) != 1:
+                print("Found %s different Wikidata Q's: %s" % (len(found_wikidata_ids), ', '.join(found_wikidata_ids)))
+                return False
+            return True
+        except TimeoutError:
+            pass  # ignore; will return false
+
+        return False
 
     def process_page(self, page: str, api: MediawikiApi, replica: ReplicaDatabase):
         page = api.get_page(page)
@@ -57,23 +84,8 @@ class FiwikiRequestedArticlesTask(Task):
 
             if len(other_links) >= 1:
                 print("Found at least 1 link to other wiki, comparing Wikidata Q's...")
-
-                local_wikidata_id = api.get_wikidata_id(api.get_page(existing_page))
-                found_wikidata_ids = set(local_wikidata_id)
-
-                for other_link in other_links:
-                    other_site = get_mediawiki_api(other_link.group(1), api.get_site().family)
-                    if not other_site:
-                        continue
-                    other_page = other_site.get_page(other_link.group(2))
-                    if not other_page:
-                        continue
-
-                    other_wikidata_id = other_site.get_wikidata_id(other_page)
-                    found_wikidata_ids.add(other_wikidata_id)
-
-                if len(found_wikidata_ids) != 1:
-                    print("Found %s different Wikidata Q's: %s" % (len(found_wikidata_ids), ', '.join(found_wikidata_ids)))
+                page = api.get_page(existing_page)
+                if not self.compare_wikidata_qs(page, api, other_links):
                     continue
 
             if not self.is_manual_run or manual_run.confirm_with_enter():
