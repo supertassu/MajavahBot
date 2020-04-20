@@ -13,6 +13,7 @@ class Task:
         self.name = name
         self.site = site
 
+        self.is_continuous = False
         self.supports_manual_run = False
         self.is_manual_run = False
 
@@ -114,7 +115,6 @@ class TaskRegistry:
             if module == '__init__.py' or module == 'task.py' or module[-3:] != '.py':
                 continue
             name = 'majavahbot.tasks.' + module[:-3]
-            print("Importing task", name)
             import_module(name)
 
 

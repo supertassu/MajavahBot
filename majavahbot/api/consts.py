@@ -1,0 +1,3 @@
+JOB_STATUS_RUNNING = "running"
+JOB_STATUS_DONE = "done"
+JOB_STATUS_FAIL = "fail"

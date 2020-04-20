@@ -20,6 +20,7 @@ class EffpTask(Task):
 
     def __init__(self, number, name, site):
         super().__init__(number, name, site)
+        self.is_continuous = True
         self.stream = None
         self.register_task_configuration(effpr_config_page)
 

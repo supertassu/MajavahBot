@@ -1,4 +1,5 @@
 from majavahbot.api import task_database, get_mediawiki_api
+from majavahbot.api.consts import JOB_STATUS_FAIL, JOB_STATUS_DONE
 from majavahbot.tasks import task_registry
 import argparse
 from sys import exit
@@ -32,7 +33,7 @@ def cli_task_list():
                  str(task.should_use_bot_flag()), str(task.supports_manual_run)))
 
 
-def cli_task(number: int, run: bool, manual: bool, config: bool):
+def cli_task(number: int, run: bool, manual: bool, config: bool, job_name="cronjob"):
     task = task_registry.get_task_by_number(number)
     if task is None:
         print("Task not found")
@@ -51,7 +52,18 @@ def cli_task(number: int, run: bool, manual: bool, config: bool):
 
     elif run:
         print("Starting task", task.number)
-        task.run()
+
+        if task.is_continuous:
+            task.run()
+        else:
+            job_id = task_database.start_job(job_name, task.number, task.get_mediawiki_api().get_site().dbName())
+            try:
+                task.run()
+                task_database.stop_job(job_id, JOB_STATUS_DONE)
+            except Exception as e:
+                task_database.stop_job(job_id, JOB_STATUS_FAIL)
+                raise e
+
     elif manual:
         print("Manually running task", task.number)
         task.do_manual_run()
@@ -76,6 +88,8 @@ if __name__ == '__main__':
         '--manual', dest='manual', type=str2bool, nargs='?', const=True, default=False, help='Manually runs the task')
     task_parser.add_argument(
         '--config', dest='config', type=str2bool, nargs='?', const=True, default=False, help='Shows the task configuration')
+    task_parser.add_argument(
+        '--job-name', dest='job_name', type=str, nargs='?', default="cronjob", help='Job name to record to database')
 
     kwargs = vars(parser.parse_args())
     subparser = kwargs.pop('subparser')

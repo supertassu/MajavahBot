@@ -69,7 +69,7 @@ class FiwikiRequestedArticlesTask(Task):
 
         page_titles = requests.keys()
         format_strings = ','.join(['%s'] * len(page_titles))
-        existing_pages = replica.execute(EXISTING_PAGE_QUERY % format_strings, tuple(page_titles))
+        existing_pages = replica.get_all(EXISTING_PAGE_QUERY % format_strings, tuple(page_titles))
 
         removed_entries = []
         new_text = text
@@ -101,17 +101,17 @@ class FiwikiRequestedArticlesTask(Task):
                 ('seuraavat täytetyt artikkelitoiveet: [[' + ']], [['.join(removed_entries) + ']]')
             )
 
-            print("Poistetaan %s toivetta sivulta %s" % (str(removed_length), page.title(as_link=True)))
+            print("Removing %s requests from page %s" % (str(removed_length), page.title(as_link=True)))
             if self.should_edit() and not self.is_manual_run or manual_run.confirm_edit():
                 page.text = new_text
                 page.save(summary, botflag=self.should_use_bot_flag())
                 self.record_trial_edit()
 
     def run(self):
-        replicadb = ReplicaDatabase("fiwiki")
-        replicadb.request()
-
         api = self.get_mediawiki_api()
+
+        replicadb = ReplicaDatabase(api.get_site().dbName())
+        replicadb.request()
 
         if self.get_task_configuration("run") is not True:
             print("Disabled in configuration")
