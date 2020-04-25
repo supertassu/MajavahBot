@@ -84,8 +84,8 @@ class FiwikiRequestedArticlesTask(Task):
 
             if len(other_links) >= 1:
                 print("Found at least 1 link to other wiki, comparing Wikidata Q's...")
-                page = api.get_page(existing_page)
-                if not self.compare_wikidata_qs(page, api, other_links):
+                local_page = api.get_page(existing_page)
+                if not self.compare_wikidata_qs(local_page, api, other_links):
                     continue
 
             if not self.is_manual_run or manual_run.confirm_with_enter():
