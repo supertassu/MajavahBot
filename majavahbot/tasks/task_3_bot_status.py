@@ -12,13 +12,14 @@ TABLE_ROW_FORMAT = """
 | %s
 | %s
 | %s
+| data-sort-value=%s | %s
 | %s
 | %s
 """
 
 
 class BotStatusData:
-    def __init__(self, name, last_edit_timestamp, last_log_timestamp, block_data, groups):
+    def __init__(self, name, last_edit_timestamp, last_log_timestamp, edit_count, groups, block_data):
         self.name = name
 
         self.last_edit_timestamp = None
@@ -35,12 +36,17 @@ class BotStatusData:
                 self.last_activity_timestamp = self.last_log_timestamp
             else:
                 self.last_activity_timestamp = max(self.last_log_timestamp, self.last_edit_timestamp)
-        self.block_data = block_data
-        self.groups = list(filter(lambda x: x not in STANDARD_GROUPS, groups))
 
-    def format_date(self, date):
+        self.edit_count = edit_count
+        self.groups = list(filter(lambda x: x not in STANDARD_GROUPS, groups))
+        self.block_data = block_data
+
+    def format_date(self, date, sortkey=True):
         if date is None:
             return "-"
+
+        if sortkey:
+            return 'data-sort-value=' + date.strftime(MEDIAWIKI_DATE_FORMAT) + ' | ' + date.strftime('%d&nbsp;%b&nbsp;%Y&nbsp;%H:%M:%S') + '&nbsp;(UTC)'
 
         return date.strftime(MEDIAWIKI_DATE_FORMAT)
 
@@ -63,6 +69,7 @@ class BotStatusData:
             self.format_date(self.last_activity_timestamp),
             self.format_date(self.last_edit_timestamp),
             self.format_date(self.last_log_timestamp),
+            self.edit_count, '{:,}'.format(self.edit_count),
             ', '.join(self.groups),
             self.format_block() if self.block_data is not None else ''
         )
@@ -97,8 +104,9 @@ class BotStatusTask(Task):
                 name=data['users'][0]['name'],
                 last_edit_timestamp=None if len(data['usercontribs']) == 0 else data['usercontribs'][0]['timestamp'],
                 last_log_timestamp=None if len(data['logevents']) == 0 else data['logevents'][0]['timestamp'],
-                block_data=block,
+                edit_count=data['users'][0]['editcount'],
                 groups=data['users'][0]['groups'],
+                block_data=block,
             )
         # TODO: make better error handling
         raise Exception("Failed loading bot data for " + username + ": " + str(data))
@@ -113,6 +121,7 @@ class BotStatusTask(Task):
 ! Last activity
 ! Last edit
 ! Last logged action
+! Total edits
 ! Groups
 ! Block
         """
