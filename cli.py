@@ -63,6 +63,9 @@ def cli_task(number: int, run: bool, manual: bool, config: bool, job_name="cronj
             except Exception as e:
                 task_database.stop_job(job_id, JOB_STATUS_FAIL)
                 raise e
+            except KeyboardInterrupt as e:
+                task_database.stop_job(job_id, JOB_STATUS_FAIL)
+                raise e
 
     elif manual:
         print("Manually running task", task.number)
