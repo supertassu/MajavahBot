@@ -1,6 +1,6 @@
 from pywikibot.data.api import QueryGenerator
 from majavahbot.tasks import Task, task_registry
-from majavahbot.api.consts import MEDIAWIKI_DATE_FORMAT
+from majavahbot.api.consts import MEDIAWIKI_DATE_FORMAT, HUMAN_DATE_FORMAT
 from datetime import datetime
 import sys
 
@@ -12,7 +12,7 @@ TABLE_ROW_FORMAT = """
 | %s
 | %s
 | %s
-| data-sort-value=%s | %s
+| %s
 | %s
 | %s
 """
@@ -27,11 +27,11 @@ class BotStatusData:
         self.last_activity_timestamp = None
 
         if last_edit_timestamp is not None:
-            self.last_edit_timestamp = datetime.strptime(last_edit_timestamp, MEDIAWIKI_DATE_FORMAT)
+            self.last_edit_timestamp = self.parse_date(last_edit_timestamp)
             self.last_activity_timestamp = self.last_edit_timestamp
 
         if last_log_timestamp is not None:
-            self.last_log_timestamp = datetime.strptime(last_log_timestamp, MEDIAWIKI_DATE_FORMAT)
+            self.last_log_timestamp = self.parse_date(last_log_timestamp)
             if self.last_edit_timestamp is None:
                 self.last_activity_timestamp = self.last_log_timestamp
             else:
@@ -41,12 +41,22 @@ class BotStatusData:
         self.groups = list(filter(lambda x: x not in STANDARD_GROUPS, groups))
         self.block_data = block_data
 
+    def format_number(self, number, sortkey=True):
+        if sortkey:
+            return 'class="nowrap" data-sort-value={} | {:,}'.format(number, number)
+        return '{:,}'.format(number)
+
+    def parse_date(self, string):
+        if string is None:
+            return None
+        return datetime.strptime(string, MEDIAWIKI_DATE_FORMAT)
+
     def format_date(self, date, sortkey=True):
         if date is None:
             return "-"
 
         if sortkey:
-            return 'data-sort-value=' + date.strftime(MEDIAWIKI_DATE_FORMAT) + ' | ' + date.strftime('%d&nbsp;%b&nbsp;%Y&nbsp;%H:%M:%S') + '&nbsp;(UTC)'
+            return 'class="nowrap" data-sort-value={} | {}'.format(date.strftime(MEDIAWIKI_DATE_FORMAT), date.strftime(HUMAN_DATE_FORMAT))
 
         return date.strftime(MEDIAWIKI_DATE_FORMAT)
 
@@ -59,17 +69,20 @@ class BotStatusData:
             .replace('>', '&gt;')
 
     def format_block(self):
-        return "%s by {{no ping|%s}} on %s with expiry at %s.<br/>Block reason is %s" % (
+        return "%s by {{no ping|%s}} on %s to expire at %s.<br/>Block reason is '%s'" % (
             'Partially blocked' if self.block_data['partial'] else 'Blocked',
-            self.block_data['by'], self.block_data['at'], self.block_data['expiry'], self.format_block_reason())
+            self.block_data['by'],
+            self.format_date(self.parse_date(self.block_data['at'])),
+            self.block_data['expiry'],
+            self.format_block_reason())
 
     def to_table_row(self):
         return TABLE_ROW_FORMAT % (
             self.name,
+            self.format_number(self.edit_count),
             self.format_date(self.last_activity_timestamp),
             self.format_date(self.last_edit_timestamp),
             self.format_date(self.last_log_timestamp),
-            self.edit_count, '{:,}'.format(self.edit_count),
             ', '.join(self.groups),
             self.format_block() if self.block_data is not None else ''
         )
@@ -118,10 +131,10 @@ class BotStatusTask(Task):
 {| class="wikitable sortable"
 |-
 ! Bot account
-! Last activity
-! Last edit
-! Last logged action
 ! Total edits
+! Last activity (UTC)
+! Last edit (UTC)
+! Last logged action (UTC)
 ! Groups
 ! Block
         """
