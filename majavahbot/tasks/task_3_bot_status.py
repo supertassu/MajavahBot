@@ -58,7 +58,7 @@ class BotStatusData:
         if sortkey:
             return 'class="nowrap" data-sort-value={} | {}'.format(date.strftime(MEDIAWIKI_DATE_FORMAT), date.strftime(HUMAN_DATE_FORMAT))
 
-        return date.strftime(MEDIAWIKI_DATE_FORMAT)
+        return date.strftime(HUMAN_DATE_FORMAT)
 
     def format_block_reason(self):
         return self.block_data['reason']\
@@ -72,7 +72,7 @@ class BotStatusData:
         return "%s by {{no ping|%s}} on %s to expire at %s.<br/>Block reason is '%s'" % (
             'Partially blocked' if self.block_data['partial'] else 'Blocked',
             self.block_data['by'],
-            self.format_date(self.parse_date(self.block_data['at'])),
+            self.format_date(self.parse_date(self.block_data['at']), sortkey=False),
             self.block_data['expiry'],
             self.format_block_reason())
 
