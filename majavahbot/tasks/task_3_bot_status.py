@@ -1,7 +1,9 @@
 from pywikibot.data.api import QueryGenerator
 from majavahbot.tasks import Task, task_registry
 from majavahbot.api.consts import MEDIAWIKI_DATE_FORMAT, HUMAN_DATE_FORMAT
+from majavahbot.api.utils import create_delay
 from datetime import datetime
+import mwparserfromhell
 import sys
 
 STANDARD_GROUPS = ['bot', '*', 'user', 'autoconfirmed', 'extendedconfirmed']
@@ -15,12 +17,14 @@ TABLE_ROW_FORMAT = """
 | %s
 | %s
 | %s
+| %s
 """
 
 
 class BotStatusData:
-    def __init__(self, name, last_edit_timestamp, last_log_timestamp, edit_count, groups, block_data):
+    def __init__(self, name, operators, last_edit_timestamp, last_log_timestamp, edit_count, groups, block_data):
         self.name = name
+        self.operators = set(operators)
 
         self.last_edit_timestamp = None
         self.last_log_timestamp = None
@@ -53,7 +57,7 @@ class BotStatusData:
 
     def format_date(self, date, sortkey=True):
         if date is None:
-            return "-"
+            return 'class="center" | —'
 
         if sortkey:
             return 'class="nowrap" data-sort-value={} | {}'.format(date.strftime(MEDIAWIKI_DATE_FORMAT), date.strftime(HUMAN_DATE_FORMAT))
@@ -79,6 +83,7 @@ class BotStatusData:
     def to_table_row(self):
         return TABLE_ROW_FORMAT % (
             self.name,
+            self.format_operators(),
             self.format_number(self.edit_count),
             self.format_date(self.last_activity_timestamp),
             self.format_date(self.last_edit_timestamp),
@@ -87,16 +92,33 @@ class BotStatusData:
             self.format_block() if self.block_data is not None else ''
         )
 
+    def format_operators(self):
+        if len(self.operators) == 0:
+            return 'class="center" | —'
+        return '{{no ping|' + '}}, {{no ping|'.join(self.operators) + '}}'
+
 
 class BotStatusTask(Task):
     def __init__(self, number, name, site):
         super().__init__(number, name, site)
 
     def get_bot_data(self, username):
+        # get all data needed with one big query
         data = QueryGenerator(site=self.get_mediawiki_api().get_site(),
+                              prop="revisions",
                               list="users|usercontribs|logevents",
+
+                              # for prop=revisions
+                              titles="User:" + username, redirects=True,
+                              rvprop="content", rvslots="main", rvlimit="1",
+
+                              # for list=usercontribs
                               uclimit=1, ucuser=username, ucdir="older",
+
+                              # for list=users
                               usprop="blockinfo|groups|editcount", ususers=username,
+
+                              # for list=logevents
                               lelimit=1, leuser=username, ledir="older"
                               ).request.submit()
         if 'query' in data:
@@ -113,8 +135,27 @@ class BotStatusTask(Task):
                     'partial': 'blockpartial' in data['users'][0],
                 }
 
+            operators = []
+            for page_id in data['pages']:
+                if page_id == "-1":
+                    continue
+                page = data['pages'][page_id]
+                if page['title'] == "User:" + username and 'missing' not in page:
+                    page_text = page['revisions'][0]['slots']['main']['*']
+                    parsed = mwparserfromhell.parse(page_text)
+                    for template in parsed.filter_templates():
+                        if template.name.matches('Bot') or template.name.matches('Bot2'):
+                            for param in template.params:
+                                if not param.can_hide_key(param.name):
+                                    continue
+                                param_text = param.value.strip_code()
+                                if len(param_text) == 0:
+                                    continue
+                                operators.append(param_text)
+
             return BotStatusData(
                 name=data['users'][0]['name'],
+                operators=operators,
                 last_edit_timestamp=None if len(data['usercontribs']) == 0 else data['usercontribs'][0]['timestamp'],
                 last_log_timestamp=None if len(data['logevents']) == 0 else data['logevents'][0]['timestamp'],
                 edit_count=data['users'][0]['editcount'],
@@ -124,6 +165,9 @@ class BotStatusTask(Task):
         # TODO: make better error handling
         raise Exception("Failed loading bot data for " + username + ": " + str(data))
 
+#    def run(self):
+#        print(self.get_bot_data("CactusBot").to_table_row())
+
     def run(self):
         api = self.get_mediawiki_api()
 
@@ -131,6 +175,7 @@ class BotStatusTask(Task):
 {| class="wikitable sortable"
 |-
 ! Bot account
+! Operator(s)
 ! Total edits
 ! Last activity (UTC)
 ! Last edit (UTC)
@@ -140,6 +185,7 @@ class BotStatusTask(Task):
         """
 
         for user in api.get_site().allusers(group='bot'):
+            delay = create_delay(10)  # to not create unnecessary lag
             username = user['name']
             print("Loading data for bot", username)
             try:
@@ -147,6 +193,7 @@ class BotStatusTask(Task):
                 table += data.to_table_row()
             except Exception as e:
                 print(e, file=sys.stderr)
+            # delay.wait()
 
         table += "|}"
 
