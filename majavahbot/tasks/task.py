@@ -8,10 +8,11 @@ import re
 
 
 class Task:
-    def __init__(self, number, name, site):
+    def __init__(self, number, name, site, family):
         self.number = number
         self.name = name
         self.site = site
+        self.family = family
 
         self.is_continuous = False
         self.supports_manual_run = False
@@ -65,7 +66,7 @@ class Task:
         task_database.record_trial_edit(self.trial['id'])
 
     def get_mediawiki_api(self) -> MediawikiApi:
-        return get_mediawiki_api(self.site)
+        return get_mediawiki_api(self.site, self.family)
 
     def task_configuration_reloaded(self, old, new):
         pass

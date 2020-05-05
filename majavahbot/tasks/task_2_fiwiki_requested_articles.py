@@ -20,8 +20,8 @@ AND EXISTS (SELECT fp_page_id FROM flaggedpages WHERE fp_page_id = page.page_id 
 
 
 class FiwikiRequestedArticlesTask(Task):
-    def __init__(self, number, name, site):
-        super().__init__(number, name, site)
+    def __init__(self, number, name, site, family):
+        super().__init__(number, name, site, family)
         self.register_task_configuration(requested_articles_config_page)
         self.supports_manual_run = True
 
@@ -126,4 +126,4 @@ class FiwikiRequestedArticlesTask(Task):
         replicadb.close()
 
 
-task_registry.add_task(FiwikiRequestedArticlesTask(2, 'Requested articles clerk', 'fi'))
+task_registry.add_task(FiwikiRequestedArticlesTask(2, 'Requested articles clerk', 'fi', 'wikipedia'))

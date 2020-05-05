@@ -115,8 +115,8 @@ class BotStatusData:
 
 
 class BotStatusTask(Task):
-    def __init__(self, number, name, site):
-        super().__init__(number, name, site)
+    def __init__(self, number, name, site, family):
+        super().__init__(number, name, site, family)
 
     def get_bot_data(self, username):
         # get all data needed with one big query
@@ -196,13 +196,13 @@ class BotStatusTask(Task):
                 # TODO: make better error handling
                 print(e, file=sys.stderr)
             # to not create unnecessary lag, let's process max 1 bot in 10 seconds as speed is not needed on cronjobs
-            delay.wait()
+            # delay.wait()
 
         table += "|}"
 
-        page = api.get_page(PAGE_NAME)
-        page.text = table
-        page.save("Bot updating status report", botflag=self.should_use_bot_flag())
+        # page = api.get_page(PAGE_NAME)
+        # page.text = table
+        # page.save("Bot updating status report", botflag=self.should_use_bot_flag())
 
 
-task_registry.add_task(BotStatusTask(3, 'Bot status report', 'en'))
+task_registry.add_task(BotStatusTask(3, 'Bot status report', 'en', 'wikipedia'))

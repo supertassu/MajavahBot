@@ -1,4 +1,15 @@
 import time
+import subprocess
+
+
+def get_revision():
+    try:
+        output = subprocess.check_output(["git", "describe", "--always"], stderr=subprocess.STDOUT).strip().decode()
+        assert 'fatal' not in output
+        return output
+    except Exception:
+        # if somehow git version retrieving command failed, just return
+        return ''
 
 
 class Delay:
