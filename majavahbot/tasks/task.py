@@ -103,7 +103,9 @@ class TaskRegistry:
         self.tasks.append(task)
 
     def get_tasks(self):
-        return self.tasks
+        tasks = list(self.tasks)
+        tasks.sort(key=(lambda task: task.number))
+        return tasks
 
     def get_task_by_number(self, number: int) -> Optional[Task]:
         for task in self.get_tasks():
