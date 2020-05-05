@@ -6,7 +6,21 @@ from datetime import datetime
 import mwparserfromhell
 import sys
 
+# Groups in this array will not be shown as additional user rights
 STANDARD_GROUPS = ['bot', '*', 'user', 'autoconfirmed', 'extendedconfirmed']
+
+TABLE_HEADER = """
+{| class="wikitable sortable" style="width:100%"
+|-
+! style="width: 10%;" | Bot account
+! style="width: 10%;" | Operator(s)
+! style="width: 10%;" | Total edits
+! style="width: 10%;" | Last activity (UTC)
+! style="width: 10%;" | Last edit (UTC)
+! style="width: 10%;" | Last logged action (UTC)
+! style="width: 10%;" | Groups
+! style="width: 30%;" | Block
+"""
 
 TABLE_ROW_FORMAT = """
 |-
@@ -57,7 +71,7 @@ class BotStatusData:
 
     def format_date(self, date, sortkey=True):
         if date is None:
-            return 'class="center" | —'
+            return '<center>—</center>'
 
         if sortkey:
             return 'class="nowrap" data-sort-value={} | {}'.format(date.strftime(MEDIAWIKI_DATE_FORMAT), date.strftime(HUMAN_DATE_FORMAT))
@@ -73,7 +87,7 @@ class BotStatusData:
             .replace('>', '&gt;')
 
     def format_block(self):
-        return "%s by {{no ping|%s}} on %s to expire at %s.<br/>Block reason is '%s'" % (
+        return "%s by {{no ping|%s}} on %s to expire at %s.<br/>Block reason is '%s{{'}}" % (
             'Partially blocked' if self.block_data['partial'] else 'Blocked',
             self.block_data['by'],
             self.format_date(self.parse_date(self.block_data['at']), sortkey=False),
@@ -94,7 +108,7 @@ class BotStatusData:
 
     def format_operators(self):
         if len(self.operators) == 0:
-            return 'class="center" | —'
+            return '<center>—</center>'
         return '{{no ping|' + '}}, {{no ping|'.join(self.operators) + '}}'
 
 
@@ -162,38 +176,25 @@ class BotStatusTask(Task):
                 groups=data['users'][0]['groups'],
                 block_data=block,
             )
-        # TODO: make better error handling
-        raise Exception("Failed loading bot data for " + username + ": " + str(data))
 
-#    def run(self):
-#        print(self.get_bot_data("CactusBot").to_table_row())
+        raise Exception("Failed loading bot data for " + username + ": " + str(data))
 
     def run(self):
         api = self.get_mediawiki_api()
-
-        table = """
-{| class="wikitable sortable"
-|-
-! Bot account
-! Operator(s)
-! Total edits
-! Last activity (UTC)
-! Last edit (UTC)
-! Last logged action (UTC)
-! Groups
-! Block
-        """
+        table = str(TABLE_HEADER)
 
         for user in api.get_site().allusers(group='bot'):
-            delay = create_delay(10)  # to not create unnecessary lag
+            delay = create_delay(10)
             username = user['name']
             print("Loading data for bot", username)
             try:
                 data = self.get_bot_data(username)
                 table += data.to_table_row()
             except Exception as e:
+                # TODO: make better error handling
                 print(e, file=sys.stderr)
-            # delay.wait()
+            # to not create unnecessary lag, let's process max 1 bot in 10 seconds as speed is not needed on cronjobs
+            delay.wait()
 
         table += "|}"
 
