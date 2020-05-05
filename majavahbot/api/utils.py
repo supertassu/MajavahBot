@@ -10,7 +10,9 @@ class Delay:
         return self.seconds - (time.time() - self.started)
 
     def wait(self):
-        time.sleep(self.get_remaining())
+        delay = self.get_remaining()
+        if delay > 0:
+            time.sleep(delay)
 
 
 def create_delay(seconds):
