@@ -9,6 +9,8 @@ import sys
 # Groups in this array will not be shown as additional user rights
 STANDARD_GROUPS = ['bot', '*', 'user', 'autoconfirmed', 'extendedconfirmed']
 
+PAGE_NAME = "User:MajavahBot/Bot status report"
+
 TABLE_HEADER = """
 {| class="wikitable sortable" style="width:100%"
 |-
@@ -198,8 +200,9 @@ class BotStatusTask(Task):
 
         table += "|}"
 
-        with open('tmp.txt', 'w', encoding="utf-8", errors="ignore") as file:
-            file.write(table)
+        page = api.get_page(PAGE_NAME)
+        page.text = table
+        page.save("Bot updating status report", botflag=self.should_use_bot_flag())
 
 
 task_registry.add_task(BotStatusTask(3, 'Bot status report', 'en'))
