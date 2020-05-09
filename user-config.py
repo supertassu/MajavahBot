@@ -8,4 +8,4 @@ usernames["wikipedia"]["fi"] = "MajavahBot"
 usernames['wikidata']['wikidata'] = u'MajavahBot'
 
 password_file = "user-password.py"
-verbose_output = True
+# verbose_output = True
