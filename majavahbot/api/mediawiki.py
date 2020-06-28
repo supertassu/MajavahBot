@@ -62,10 +62,16 @@ class MediawikiApi:
         return dates[-1] if len(dates) > 0 else None
 
     def get_wikidata_id(self, page: pywikibot.Page):
+        if not page.exists():
+            return None
+
         item = pywikibot.ItemPage.fromPage(page)
         if not item:
             return None
         return item.title()
+
+    def compare_page_titles(self, first: str, second: str) -> bool:
+        return first.lower().replace('_', ' ') == second.lower().replace('_', ' ')
 
 
 mediawiki_apis = {}

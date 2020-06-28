@@ -36,7 +36,7 @@ class FiwikiRequestedArticlesTask(Task):
                 if not other_site:
                     continue
                 other_page = other_site.get_page(other_link.group(2))
-                if not other_page:
+                if not other_page or not other_page.exists():
                     continue
 
                 other_wikidata_id = other_site.get_wikidata_id(other_page)

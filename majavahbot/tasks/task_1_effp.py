@@ -75,13 +75,13 @@ class EffpTask(Task):
 
             if last_hit_page_title != page_title and not page_title_missing:
                 if last_hit_page_title is not None and page_title is not None:
-                    if last_hit_page_title.lower() == page_title.lower():
+                    if api.compare_page_titles(last_hit_page_title, page_title):
                         page_title_obviously_wrong = True
 
                 for pattern in self.get_task_configuration('page_title_wrong_formats'):
                     wrong_spelling = search(pattern, page_title)
                     if wrong_spelling is not None:
-                        if wrong_spelling.group(1).lower() == last_hit_page_title.lower():
+                        if api.compare_page_titles(wrong_spelling.group(1), last_hit_page_title):
                             page_title_obviously_wrong = True
 
             if page_title_missing or page_title_obviously_wrong:
