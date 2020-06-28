@@ -186,7 +186,7 @@ class BotStatusTask(Task):
         table = str(TABLE_HEADER)
 
         for user in api.get_site().allusers(group='bot'):
-            delay = create_delay(10)
+            delay = create_delay(5)
             username = user['name']
             print("Loading data for bot", username)
             try:
@@ -195,7 +195,7 @@ class BotStatusTask(Task):
             except Exception as e:
                 # TODO: make better error handling
                 print(e, file=sys.stderr)
-            # to not create unnecessary lag, let's process max 1 bot in 10 seconds as speed is not needed on cronjobs
+            # to not create unnecessary lag, let's process max 1 bot in 5 seconds as speed is not needed on cronjobs
             delay.wait()
 
         table += "|}"
