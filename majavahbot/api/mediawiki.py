@@ -65,6 +65,12 @@ class MediawikiApi:
         if not page.exists():
             return None
 
+        # T256583, T87345
+        page.get(get_redirect=True)
+        if page.isRedirectPage():
+            page = page.getRedirectTarget()
+            page.get()
+
         item = pywikibot.ItemPage.fromPage(page)
         if not item:
             return None
