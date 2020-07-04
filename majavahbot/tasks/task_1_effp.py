@@ -317,6 +317,11 @@ class EffpTask(Task):
             return False
 
         last_reply = api.get_last_reply(text)
+
+        # if no replies found, return false instead of processing (and crashing)
+        if last_reply is None:
+            return False
+
         no_resolution_time = self.get_task_configuration('no_resolution_archive_time')
         lowertext = text.lower()
 
