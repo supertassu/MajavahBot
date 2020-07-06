@@ -1,5 +1,12 @@
 import time
+import re
 import subprocess
+
+multiline_reply_regex = re.compile("\n+([^\n]+~~~~)")
+
+
+def remove_empty_lines_before_replies(text: str) -> str:
+    return multiline_reply_regex.sub(text, "\n\\1")
 
 
 def get_revision():

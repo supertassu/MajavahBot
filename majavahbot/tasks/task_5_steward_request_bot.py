@@ -1,4 +1,6 @@
-from majavahbot.api import MediawikiApi
+from majavahbot.api import manual_run
+from majavahbot.api.mediawiki import MediawikiApi
+from majavahbot.api.utils import remove_empty_lines_before_replies
 from majavahbot.config import steward_request_bot_config_page
 from majavahbot.tasks import Task, task_registry
 from pywikibot.data.api import QueryGenerator
@@ -33,7 +35,8 @@ class StewardRequestTask(Task):
     def run(self):
         self.merge_task_configuration(
             run=True,
-            page="Steward requests/Global"
+            page="Steward requests/Global",
+            summary="BOT: Marking already done requests"
         )
 
         if self.get_task_configuration("run") is not True:
@@ -104,7 +107,14 @@ class StewardRequestTask(Task):
                 section.append(": {{alreadydone}} by " + awesome_people + " ~~~~\n")
                 print("Marking as already done", awesome_people, status)
 
-        print(parsed)
+        new_text = str(parsed)
+        new_text = remove_empty_lines_before_replies(new_text)
+        print(new_text)
+
+        if self.should_edit() and not self.is_manual_run or manual_run.confirm_edit():
+            page.text = new_text
+            page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
+            self.record_trial_edit()
 
 
 task_registry.add_task(StewardRequestTask(5, 'Steward request bot', 'meta', 'meta'))
