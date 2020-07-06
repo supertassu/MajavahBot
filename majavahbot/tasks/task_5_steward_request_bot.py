@@ -124,10 +124,10 @@ class StewardRequestTask(Task):
             file.write(new_text.encode('utf-8'))
 
         if self.should_edit() and not self.is_manual_run or manual_run.confirm_edit():
-            pass
-            # page.text = new_text
-            # page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
-            # self.record_trial_edit()
+            api.site.login()
+            page.text = new_text
+            page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
+            self.record_trial_edit()
 
 
 task_registry.add_task(StewardRequestTask(5, 'Steward request bot', 'meta', 'meta'))
