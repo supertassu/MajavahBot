@@ -50,7 +50,7 @@ def cli_task(number: int, run: bool, manual: bool, config: bool, job_name="cronj
         exit(1)
         return
 
-    elif run:
+    if run:
         print("Starting task", task.number)
 
         if task.is_continuous:
@@ -66,7 +66,6 @@ def cli_task(number: int, run: bool, manual: bool, config: bool, job_name="cronj
             except KeyboardInterrupt as e:
                 task_database.stop_job(job_id, JOB_STATUS_FAIL)
                 raise e
-
     elif manual:
         print("Manually running task", task.number)
         task.do_manual_run()

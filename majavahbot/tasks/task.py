@@ -19,6 +19,7 @@ class Task:
         self.is_manual_run = False
 
         self.task_configuration = {}
+        self.base_task_configuration = {}
         self.task_configuration_page = None
         self.task_configuration_last_loaded = None
 
@@ -73,9 +74,16 @@ class Task:
 
     def _load_task_configuration(self, contents: str):
         config_text = re.sub(r"[\n ]//.*", "", contents, flags=re.MULTILINE)
+
+        if len(config_text) == 0:
+            config_text = '{}'
+
         config = json.loads(config_text)
-        self.task_configuration_reloaded(self.task_configuration, config)
+
         self.task_configuration = config
+        self._merge_task_configuration()
+
+        self.task_configuration_reloaded(self.task_configuration, config)
         self.task_configuration_last_loaded = datetime.now()
 
     def register_task_configuration(self, config_page_name: str):
@@ -93,6 +101,16 @@ class Task:
 
         # TODO: support for nested keys
         return self.task_configuration[key]
+
+    def merge_task_configuration(self, **fill):
+        self.base_task_configuration = fill
+        self._merge_task_configuration()
+
+    def _merge_task_configuration(self):
+        for key in self.base_task_configuration:
+            value = self.base_task_configuration[key]
+            if key not in self.task_configuration:
+                self.task_configuration[key] = value
 
 
 class TaskRegistry:
