@@ -1,4 +1,4 @@
-from majavahbot.api import manual_run
+from majavahbot.api import manual_run, utils
 from majavahbot.api.mediawiki import MediawikiApi
 from majavahbot.api.utils import remove_empty_lines_before_replies
 from majavahbot.config import steward_request_bot_config_page
@@ -20,6 +20,10 @@ class StewardRequestTask(Task):
                               ).request.submit()['query']['globalblocks']
         if len(data) == 0:
             return None
+
+        if not utils.was_enough_time_ago(data[0]['timestamp'], self.get_task_configuration('time_min')):
+            return None
+
         return data[0]['by']
 
     def get_steward_who_locked_account(self, api: MediawikiApi, account_name):
@@ -28,15 +32,21 @@ class StewardRequestTask(Task):
                               letype="globalauth",
                               letitle="User:" + account_name + "@global"
                               ).request.submit()['query']['logevents']
+
         if len(data) == 0 or "locked" not in data[0]['params']['0']:
             return None
+
+        if not utils.was_enough_time_ago(data[0]['timestamp'], self.get_task_configuration('time_min')):
+            return None
+
         return data[0]['user']
 
     def run(self):
         self.merge_task_configuration(
             run=True,
             page="Steward requests/Global",
-            summary="BOT: Marking already done requests"
+            summary="BOT: Marking already done requests",
+            time_min=5*60
         )
 
         if self.get_task_configuration("run") is not True:
@@ -104,17 +114,20 @@ class StewardRequestTask(Task):
 
             if mark_done:
                 status.add(1, 'alreadydone')
-                section.append(": {{alreadydone}} by " + awesome_people + " ~~~~\n")
-                print("Marking as already done", awesome_people, status)
+                section.append(": {{already done}} by " + awesome_people + ". ~~~~\n")
+                print("Marking as already done", awesome_people, status, ips, accounts)
 
         new_text = str(parsed)
         new_text = remove_empty_lines_before_replies(new_text)
-        print(new_text)
+
+        with open('output.txt', 'wb') as file:
+            file.write(new_text.encode('utf-8'))
 
         if self.should_edit() and not self.is_manual_run or manual_run.confirm_edit():
-            page.text = new_text
-            page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
-            self.record_trial_edit()
+            pass
+            # page.text = new_text
+            # page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
+            # self.record_trial_edit()
 
 
 task_registry.add_task(StewardRequestTask(5, 'Steward request bot', 'meta', 'meta'))
