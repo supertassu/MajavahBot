@@ -12,3 +12,4 @@ replica.my.cnf
 
 # ignore local testing script
 test.py
+temp/
