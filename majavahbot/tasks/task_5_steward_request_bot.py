@@ -45,7 +45,7 @@ class StewardRequestTask(Task):
         self.merge_task_configuration(
             run=True,
             page="Steward requests/Global",
-            summary="BOT: Marking already done requests",
+            summary="BOT: Marking done requests as done",
             time_min=5*60
         )
 
@@ -114,7 +114,7 @@ class StewardRequestTask(Task):
 
             if mark_done:
                 status.add(1, 'done')
-                section.append(": {{done}} by " + awesome_people + " (clerked by bot) ~~~~\n")
+                section.append(": '''Robot clerk note:''' {{done}} by " + awesome_people + " ~~~~\n")
                 print("Marking as done", awesome_people, status, ips, accounts)
 
         new_text = str(parsed)
