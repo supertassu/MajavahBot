@@ -131,6 +131,12 @@ class TaskRegistry:
                 return task
         return None
 
+    def get_tasks_for_wiki(self, family: str, lang: str):
+        tasks = filter(lambda task: (task.family == family and task.site == lang), self.tasks)
+        tasks = list(tasks)
+        tasks.sort(key=(lambda task: task.number))
+        return tasks
+
     def add_all_tasks(self):
         for module in os.listdir(os.path.dirname(__file__)):
             if module == '__init__.py' or module == 'task.py' or module[-3:] != '.py':

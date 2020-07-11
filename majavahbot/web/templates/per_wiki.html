@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="row">
+        <div class="col-sm">
+            <div class="card">
+                <h5 class="card-header">Last jobs in wiki {{ wiki }}</h5>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Task</th>
+                            <th scope="col">Wiki</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for job in jobs %}
+                            <tr>
+                                <td>
+                                    {{ job[0] }}
+                                </td>
+
+                                <td>
+                                    <span class="badge {{ get_badge_color_for_status(job[1]) }}">
+                                         {{ job[1] }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {{ job[5] }}
+
+                                    {% if job[6] is not none %}
+                                        <br/>
+                                        <small class="text-small text-muted">took {{ format_duration(job) }}</small>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ job[2] }}
+                                </td>
+
+                                <td>
+                                    {{ job[3] }}
+                                </td>
+
+                                <td>
+                                    {{ job[4] }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

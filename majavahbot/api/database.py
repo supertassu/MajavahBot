@@ -92,7 +92,7 @@ class TaskDatabase(BaseDatabase):
         self.run("create table if not exists jobs (id integer primary key auto_increment not null,"
                  "status varchar(16) not null, job_name varchar(64) not null,"
                  "task_id integer not null, task_wiki varchar(16) not null,"
-                 "started_at timestamp not null default 0, ended_at timestamp default 0);")
+                 "started_at timestamp not null default now(), ended_at timestamp default null);")
 
         self.close()
 
@@ -134,7 +134,6 @@ class TaskDatabase(BaseDatabase):
         self.run("update task_trials set edits_done = edits_done + 1 where id = %s;", (trial_id,))
 
     def start_job(self, job_name: str, task_id: int, task_wiki: str):
-        print(JOB_STATUS_RUNNING)
         return self.run("insert into jobs (job_name, task_id, task_wiki, status, started_at)"
                         "values (%s, %s, %s, %s, CURRENT_TIMESTAMP())",
                         (job_name, task_id, task_wiki, JOB_STATUS_RUNNING,), True)

@@ -67,3 +67,18 @@ def index():
                            format_duration=format_duration,
                            )
 
+
+@blueprint.route('/jobs/wiki/<wiki>')
+def jobs_per_wiki(wiki):
+    task_database.request()
+    task_database.init()
+    task_registry.add_all_tasks()
+    jobs = task_database.get_all("select id, status, job_name, task_id, task_wiki, started_at, ended_at from jobs where task_wiki = %s order by `started_at` desc limit 20", (wiki, ))
+    task_database.close()
+
+    return render_template('per_wiki.html',
+                           wiki=wiki,
+                           jobs=jobs,
+                           get_badge_color_for_status=get_badge_color_for_status,
+                           format_duration=format_duration,
+                           )
