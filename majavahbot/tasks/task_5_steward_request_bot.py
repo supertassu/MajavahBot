@@ -1,6 +1,6 @@
-from majavahbot.api import manual_run, utils
+from majavahbot.api.manual_run import confirm_edit
 from majavahbot.api.mediawiki import MediawikiApi
-from majavahbot.api.utils import remove_empty_lines_before_replies
+from majavahbot.api.utils import remove_empty_lines_before_replies, was_enough_time_ago
 from majavahbot.config import steward_request_bot_config_page
 from majavahbot.tasks import Task, task_registry
 from pywikibot.data.api import QueryGenerator
@@ -21,7 +21,7 @@ class StewardRequestTask(Task):
         if len(data) == 0:
             return None
 
-        if not utils.was_enough_time_ago(data[0]['timestamp'], self.get_task_configuration('time_min')):
+        if not was_enough_time_ago(data[0]['timestamp'], self.get_task_configuration('time_min')):
             return None
 
         return data[0]['by']
@@ -36,7 +36,7 @@ class StewardRequestTask(Task):
         if len(data) == 0 or "locked" not in data[0]['params']['0']:
             return None
 
-        if not utils.was_enough_time_ago(data[0]['timestamp'], self.get_task_configuration('time_min')):
+        if not was_enough_time_ago(data[0]['timestamp'], self.get_task_configuration('time_min')):
             return None
 
         return data[0]['user']
@@ -87,7 +87,7 @@ class StewardRequestTask(Task):
                         ips.append(param_text)
 
             # status already has a value, assuming this has already been processed
-            if not status or status.has(1):
+            if (not status) or (not status.has(1)) or len(status.get(1).value) > 0:
                 continue
 
             mark_done = True
@@ -114,13 +114,13 @@ class StewardRequestTask(Task):
 
             if mark_done:
                 status.add(1, 'done')
-                section.append(": '''Robot clerk note:''' {{done}} by " + awesome_people + " ~~~~\n")
+                section.append(": '''Robot clerk note:''' {{done}} by " + awesome_people + ". ~~~~\n")
                 print("Marking as done", awesome_people, status, ips, accounts)
 
         new_text = str(parsed)
         new_text = remove_empty_lines_before_replies(new_text)
 
-        if new_text != page.get() and self.should_edit() and (not self.is_manual_run or manual_run.confirm_edit()):
+        if new_text != page.get() and self.should_edit() and (not self.is_manual_run or confirm_edit()):
             api.site.login()
             page.text = new_text
             page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
