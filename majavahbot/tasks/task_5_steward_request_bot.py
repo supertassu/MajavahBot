@@ -55,7 +55,8 @@ class StewardRequestTask(Task):
 
         api = self.get_mediawiki_api()
         page = api.get_page(self.get_task_configuration('page'))
-        parsed = mwparserfromhell.parse(page.get())
+        page_text = page.get(force=True)
+        parsed = mwparserfromhell.parse(page_text)
         sections = parsed.get_sections(levels=[3])
 
         for section in sections:
@@ -120,7 +121,7 @@ class StewardRequestTask(Task):
         new_text = str(parsed)
         new_text = remove_empty_lines_before_replies(new_text)
 
-        if new_text != page.get() and self.should_edit() and (not self.is_manual_run or confirm_edit()):
+        if new_text != page_text and self.should_edit() and (not self.is_manual_run or confirm_edit()):
             api.site.login()
             page.text = new_text
             page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
