@@ -88,7 +88,7 @@ class StewardRequestTask(Task):
                         ips.append(param_text)
 
             # status already has a value, assuming this has already been processed
-            if (not status) or (not status.has(1)) or len(status.get(1).value) > 0:
+            if (not status) or (status.has(1) and len(status.get(1).value) > 0):
                 continue
 
             mark_done = True
