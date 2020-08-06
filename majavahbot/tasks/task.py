@@ -14,6 +14,8 @@ class Task:
         self.site = site
         self.family = family
 
+        self.param = ""
+
         self.is_continuous = False
         self.supports_manual_run = False
         self.is_manual_run = False

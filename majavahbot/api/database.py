@@ -62,13 +62,22 @@ class BaseDatabase:
 
 
 class ReplicaDatabase(BaseDatabase):
-    def __init__(self, db):
+    def __init__(self, db: str):
+        while db.endswith("_p"):
+            db = db[:-2]
+
+        self.db_name = db
         super().__init__(
             host=analytics_db_hostname.replace("{DB}", db),
             port=analytics_db_port,
             option_files=analytics_db_option_file,
             database=db + "_p"
         )
+
+    def get_replag(self):
+        query = "SELECT lag FROM heartbeat_p.heartbeat JOIN meta_p.wiki ON shard = SUBSTRING_INDEX(slice, \".\", 1) WHERE dbname = %s;"
+        results = self.get_one(query, (self.db_name, ))
+        return results[0]
 
 
 class TaskDatabase(BaseDatabase):
@@ -92,7 +101,7 @@ class TaskDatabase(BaseDatabase):
         self.run("create table if not exists jobs (id integer primary key auto_increment not null,"
                  "status varchar(16) not null, job_name varchar(64) not null,"
                  "task_id integer not null, task_wiki varchar(16) not null,"
-                 "started_at timestamp not null default now(), ended_at timestamp default null);")
+                 "started_at timestamp not null default now(), ended_at timestamp default 0);")
 
         self.close()
 

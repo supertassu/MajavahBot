@@ -1,4 +1,4 @@
-from majavahbot.api import task_database, get_mediawiki_api
+from majavahbot.api import task_database, get_mediawiki_api, ReplicaDatabase
 from majavahbot.api.consts import JOB_STATUS_FAIL, JOB_STATUS_DONE
 from majavahbot.tasks import task_registry
 import argparse
@@ -33,11 +33,18 @@ def cli_task_list():
                  str(task.should_use_bot_flag()), str(task.supports_manual_run)))
 
 
-def cli_task(number: int, run: bool, manual: bool, config: bool, job_name="cronjob"):
+def cli_check_replica(name: str):
+    db = ReplicaDatabase(name)
+    print("Successfully connected to " + db.db_name + ". Replication lag is " + str(db.get_replag()) + " seconds.")
+
+
+def cli_task(number: int, run: bool, manual: bool, config: bool, job_name="cronjob", param=""):
     task = task_registry.get_task_by_number(number)
     if task is None:
         print("Task not found")
         exit(1)
+
+    task.param = param
 
     if config:
         print("Task configuration for task", task.number)
@@ -81,6 +88,9 @@ if __name__ == '__main__':
     whoami_parser = subparsers.add_parser('whoami')
     task_list_parser = subparsers.add_parser('task_list')
 
+    replica_parser = subparsers.add_parser('check_replica')
+    replica_parser.add_argument('name', metavar="name", help="Database name to check connectivity to", type=str)
+
     task_parser = subparsers.add_parser('task')
     task_parser.add_argument(
         'number', metavar='number', help='Task number', type=int)
@@ -92,6 +102,8 @@ if __name__ == '__main__':
         '--config', dest='config', type=str2bool, nargs='?', const=True, default=False, help='Shows the task configuration')
     task_parser.add_argument(
         '--job-name', dest='job_name', type=str, nargs='?', default="cronjob", help='Job name to record to database')
+    task_parser.add_argument(
+        '--param', dest='param', type=str, nargs='?', default="", help='Additional param passed to the job')
 
     kwargs = vars(parser.parse_args())
     subparser = kwargs.pop('subparser')
