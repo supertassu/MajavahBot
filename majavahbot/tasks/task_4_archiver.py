@@ -20,6 +20,13 @@ where
         and (tl_title = "MajavahBot/config" or tl_title = "MajavahBot/no-autotag")
         and tl_namespace = 2
     )
+    and not exists (
+        select 1
+        from page_restrictions
+        where pr_page = page_id
+        and pr_type = 'edit'
+        and pr_level = 'sysop'    
+    )
 order by page_len desc
 limit 20;
 """
