@@ -139,7 +139,8 @@ class EffpTask(Task):
         section_header_pattern = compile(self.get_task_configuration('section_header'))
         sections = []
 
-        matches = list(section_header_pattern.finditer(page))
+        # add a \n to beginning, since the regex needs one
+        matches = list(section_header_pattern.finditer("\n" + page))
 
         if len(matches) == 0:
             return page, []
@@ -149,7 +150,11 @@ class EffpTask(Task):
             end = matches[i + 1].start() - 1 if i < (len(matches) - 1) else len(page)
             sections.append((match.group(1), page[match.start():end] + "\n"))
 
-        return page[:matches[0].start() - 1] + "\n", sections
+        header = page[:matches[0].start() - 1]
+        # cut out the first line ending added when passing the page text to the regex
+        header = header[1:]
+
+        return header + "\n", sections
 
     def create_edit_summary(self, archived_sections: list, given_summaries: dict) -> str:
         processed_sections = list(given_summaries.keys())
