@@ -89,8 +89,8 @@ class DykEntryTalkTask(Task):
 
             log_counter += 1
             if log_counter > 25:
-                pass
                 # page.save(self.get_task_configuration("missing_blurb_log_summary"), botflag=self.should_use_bot_flag())
+                log_counter = 0
 
 
 task_registry.add_task(DykEntryTalkTask(6, "DYK entry filler", "en", "wikipedia"))
