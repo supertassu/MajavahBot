@@ -66,7 +66,7 @@ class DykEntryTalkTask(Task):
                     if date:
                         template.add(1, date)
                         summary = "missing_blurb_corrected_date_edit_summary"
-                        print(str(template), summary)
+                    print(page.title(as_link=True), str(template))
 
                     if self.should_edit() and (not self.is_manual_run or confirm_edit()):
                         self.get_mediawiki_api().get_site().login()
