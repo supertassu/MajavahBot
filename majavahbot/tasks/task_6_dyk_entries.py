@@ -29,6 +29,10 @@ class DykEntryTalkTask(Task):
 
         for section in archive_sections:
             header = section.filter_headings()[0]
+
+            if len(section.filter_headings()) != 1:
+                raise Exception(page.title() + " has weird syntax: " + str(section.filter_headings()) + " in one section")
+
             for row in str(section).split("\n"):
                 if search_entry in row:
                     text = row[1:]  # remove * from beginning
