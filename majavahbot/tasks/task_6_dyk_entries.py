@@ -1,3 +1,4 @@
+from majavahbot.api.database import ReplicaDatabase
 from majavahbot.api.manual_run import confirm_edit
 from majavahbot.tasks import Task, task_registry
 from pywikibot import Page, Category, pagegenerators
@@ -6,6 +7,29 @@ import re
 
 
 DATE_REGEX = re.compile(r"(\d+ [a-zA-Z]+) \d{4}")
+
+
+QUERY = """
+select
+    page_id,
+    page_title
+from page
+where
+    page_namespace = 1
+    and page_title not in (
+        select 1
+        from pagelinks
+        where pl_from = 65539331 -- User:MajavahBot/DYK blurb not found
+        and pl_namespace = 1
+    )
+    and exists (
+        select 1
+        from categorylinks
+        where cl_from = page_id
+        and cl_to = "Pages_using_DYK_talk_with_a_missing_entry"
+    )
+limit 50;
+"""
 
 
 class DykEntryTalkTask(Task):
@@ -97,16 +121,30 @@ class DykEntryTalkTask(Task):
             print("Disabled in configuration")
             return
 
-        site = self.get_mediawiki_api().get_site()
+        api = self.get_mediawiki_api()
+        site = api.get_site()
 
-        log_page = self.get_mediawiki_api().get_page(self.get_task_configuration("missing_blurb_log_page"))
+        log_page = api.get_page(self.get_task_configuration("missing_blurb_log_page"))
         log_counter = 0
 
-        category = Category(site, self.get_task_configuration("missing_blurb_category"))
-        pages = category.articles()
-        for page in pagegenerators.PreloadingGenerator(pages, 20):
+        replicadb = ReplicaDatabase(site.dbName())
+
+        replag = replicadb.get_replag()
+        if replag > 10:
+            print("Replag is over 10 seconds, not processing! (" + str(replag) + ")")
+            return
+
+        results = replicadb.get_all(QUERY)
+        print("-- Got %s pages" % (str(len(results))))
+        for page_from_db in results:
             if not self.should_edit():
                 break
+
+            page_id = page_from_db[0]
+            page_name = page_from_db[1].decode('utf-8')
+
+            page = api.get_page("Talk:" + page_name)
+            assert page.pageid == page_id
 
             if self.process_page(page):
                 continue
