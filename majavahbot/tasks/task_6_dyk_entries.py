@@ -31,7 +31,7 @@ class DykEntryTalkTask(Task):
         looking_for = "'''[[" + page.title(with_ns=False)
         for row in str(section).split("\n"):
             if looking_for in row:
-                return row
+                return row[1:]  # remove * from beginning
 
     def process_page(self, page: Page):
         page_text = page.get(force=True)
@@ -44,7 +44,7 @@ class DykEntryTalkTask(Task):
 
                 entry = self.get_entry(section, page)
                 if entry:
-                    template.add("entry", entry[1:])  # remove * from beginning
+                    template.add("entry", entry[1:])
 
                     if self.should_edit() and (not self.is_manual_run or confirm_edit()):
                         self.get_mediawiki_api().get_site().login()
