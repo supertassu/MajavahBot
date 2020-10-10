@@ -28,7 +28,8 @@ where
         where cl_from = page_id
         and cl_to = "Pages_using_DYK_talk_with_a_missing_entry"
     )
-limit 50;
+order by page_title
+limit 100;
 """
 
 
