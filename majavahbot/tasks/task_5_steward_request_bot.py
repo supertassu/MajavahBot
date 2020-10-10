@@ -89,6 +89,7 @@ class StewardRequestTask(Task):
 
             # status already has a value, assuming this has already been processed
             if (not status) or (status.has(1) and len(status.get(1).value) > 0):
+                print("Section has non-ok status", status, accounts, ips)
                 continue
 
             mark_done = True
@@ -107,6 +108,7 @@ class StewardRequestTask(Task):
                 else:
                     awesome_people.append(steward)
 
+            print(accounts, ips, awesome_people, mark_done)
             if not mark_done or len(awesome_people) == 0:
                 continue
 

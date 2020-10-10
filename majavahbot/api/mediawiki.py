@@ -72,7 +72,7 @@ class MediawikiApi:
             page.get()
 
         item = pywikibot.ItemPage.fromPage(page)
-        if not item:
+        if not item or not item.exists():
             return None
         return item.title()
 

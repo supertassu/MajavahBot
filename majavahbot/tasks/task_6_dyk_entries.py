@@ -84,6 +84,11 @@ class DykEntryTalkTask(Task):
             if template.name.matches("Dyktalk") or template.name.matches("DYK talk"):
                 year = template.get(2)
                 day, month = template.get(1).split(" ")
+                if str(month).isdecimal() and not str(day).isdecimal():
+                    # swap out month and day if necessary
+                    month, day = day, month
+
+                print(page.title(), year, month, day)
                 entry_data = self.get_archive_section(year, month, day, page)
 
                 if entry_data:

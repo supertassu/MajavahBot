@@ -43,11 +43,11 @@ class FiwikiRequestedArticlesTask(Task):
                 found_wikidata_ids.add(str(other_wikidata_id))
 
             if len(found_wikidata_ids) != 1:
-                print("Found %s different Wikidata Q's: %s" % (len(found_wikidata_ids), ', '.join(found_wikidata_ids)))
+                print("Found %s different Wikidata Qs: %s" % (len(found_wikidata_ids), ', '.join(found_wikidata_ids)))
                 return False
             return True
-        except TimeoutError:
-            pass  # ignore; will return false
+        except:
+            print("Got an error while comparing Wikidata Qs, check if page is connected to wikidata")  # ignore; will return false
 
         return False
 

@@ -140,7 +140,8 @@ class EffpTask(Task):
         sections = []
 
         # add a \n to beginning, since the regex needs one
-        matches = list(section_header_pattern.finditer("\n" + page))
+        page = "\n" + page
+        matches = list(section_header_pattern.finditer(page))
 
         if len(matches) == 0:
             return page, []
