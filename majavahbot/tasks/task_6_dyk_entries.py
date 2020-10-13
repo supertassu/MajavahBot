@@ -44,7 +44,6 @@ class DykEntryTalkTask(Task):
         return self.get_mediawiki_api().get_page(archive_page_name)
 
     def get_archive_section(self, year, month, day, page: Page):
-        search_heading = str(day) + " " + str(month) + " " + str(year)
         search_entry = "'''[[" + page.title(with_ns=False)
 
         page = self.get_archive_page(year, month)
@@ -53,30 +52,11 @@ class DykEntryTalkTask(Task):
         archive_sections = parsed_archive.get_sections(levels=[3])
 
         for section in archive_sections:
-            header = section.filter_headings()[0]
-
-            if len(section.filter_headings()) != 1:
-                raise Exception(page.title() + " has weird syntax: " + str(section.filter_headings()) + " in one section")
-
             for row in str(section).split("\n"):
                 if search_entry in row:
                     text = row[1:]  # remove * from beginning
-
-                    if search_heading in header:
-                        return text, None
-
-                    date_match = DATE_REGEX.search(str(header))
-                    print(date_match, str(header))
-                    if date_match:
-                        return text, date_match.group(1)
-
-                    return text, None
-
-    def get_entry(self, section, page: Page):
-        looking_for = "'''[[" + page.title(with_ns=False)
-        for row in str(section).split("\n"):
-            if looking_for in row:
-                return row[1:]  # remove * from beginning
+                    # you could check dates here, if wanted - please don't for now, see BRFA for more details
+                    return text
 
     def process_page(self, page: Page):
         page_text = page.get(force=True)
@@ -90,16 +70,12 @@ class DykEntryTalkTask(Task):
                     month, day = day, month
 
                 print(page.title(), year, month, day)
-                entry_data = self.get_archive_section(year, month, day, page)
+                entry = self.get_archive_section(year, month, day, page)
 
-                if entry_data:
+                if entry:
                     summary = "missing_blurb_edit_summary"
-                    entry, date = entry_data
                     template.add("entry", entry)
 
-                    if date:
-                        template.add(1, date)
-                        summary = "missing_blurb_corrected_date_edit_summary"
                     print(page.title(as_link=True), str(template))
 
                     if self.should_edit() and (not self.is_manual_run or confirm_edit()):
@@ -115,12 +91,10 @@ class DykEntryTalkTask(Task):
         self.merge_task_configuration(
             missing_blurb_enable=True,
 
-            missing_blurb_category="Pages using DYK talk with a missing entry",
-            missing_blurb_edit_summary="Bot: Fill missing DYK blurb",
-            missing_blurb_corrected_date_edit_summary="Bot: Correct DYK appearance date and fill out blurb",
+            missing_blurb_edit_summary="[[WP:Bots/Requests for approval/MajavahBot 4|Bot]]: Fill missing DYK blurb",
 
             missing_blurb_log_page="User:MajavahBot/DYK blurb not found",
-            missing_blurb_log_summary="Bot: Update log for DYK blurbs that were not found"
+            missing_blurb_log_summary="[[WP:Bots/Requests for approval/MajavahBot 4|Bot]]: Update log for DYK blurbs that were not found"
         )
 
         if self.get_task_configuration("missing_blurb_enable") is not True:
