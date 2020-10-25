@@ -60,6 +60,11 @@ class StewardRequestTask(Task):
         sections = parsed.get_sections(levels=[3])
 
         for section in sections:
+            header = section.filter_headings()[0]
+            if ("unlock" in header and "/unlock" not in header) or ("unblock" in header and "/unblock" not in header):
+                print("Assuming section", header, " is a un(b)lock request, skipping")
+                continue
+
             status = None
 
             accounts = []
