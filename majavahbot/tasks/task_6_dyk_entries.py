@@ -1,7 +1,8 @@
 from majavahbot.api.database import ReplicaDatabase
 from majavahbot.api.manual_run import confirm_edit
 from majavahbot.tasks import Task, task_registry
-from pywikibot import Page, Category, pagegenerators
+from functools import lru_cache
+from pywikibot import Page
 import mwparserfromhell
 import re
 
@@ -26,7 +27,7 @@ where
         select 1
         from categorylinks
         where cl_from = page_id
-        and cl_to = "Pages_using_DYK_talk_with_a_missing_entry"
+        and cl_to = "Pages_with_a_missing_DYK_entry"
     )
 order by page_title
 limit 100;
@@ -39,15 +40,15 @@ class DykEntryTalkTask(Task):
         self.supports_manual_run = True
         self.register_task_configuration("User:MajavahBot/DYK options")
 
+    @lru_cache()
     def get_archive_page(self, year, month):
         archive_page_name = "Wikipedia:Recent additions/" + str(year) + "/" + str(month)
-        return self.get_mediawiki_api().get_page(archive_page_name)
+        return self.get_mediawiki_api().get_page(archive_page_name).get()
 
-    def get_archive_section(self, year, month, day, page: Page):
+    def get_entry_for_page(self, year, month, day, page: Page):
         search_entry = "'''[[" + page.title(with_ns=False)
 
-        page = self.get_archive_page(year, month)
-        archive_text = page.get()
+        archive_text = self.get_archive_page(year, month)
         parsed_archive = mwparserfromhell.parse(archive_text)
         archive_sections = parsed_archive.get_sections(levels=[3])
 
@@ -57,34 +58,58 @@ class DykEntryTalkTask(Task):
                     text = row[1:]  # remove * from beginning
                     # you could check dates here, if wanted - please don't for now, see BRFA for more details
                     return text
+        return False
 
     def process_page(self, page: Page):
         page_text = page.get(force=True)
         parsed = mwparserfromhell.parse(page_text)
+
+        year = None
+        month = None
+        day = None
+        entry = None
+
         for template in parsed.filter_templates():
             if template.name.matches("Dyktalk") or template.name.matches("DYK talk"):
-                year = template.get(2)
-                day, month = template.get(1).split(" ")
-                if str(month).isdecimal() and not str(day).isdecimal():
-                    # swap out month and day if necessary
-                    month, day = day, month
+                if year is None:
+                    if not template.has(1):
+                        print("Skipping {{DYK talk}} page", page, ", no date found")
+                        continue
+
+                    year = template.get(2)
+                    day, month = template.get(1).split(" ")
+                    if str(month).isdecimal() and not str(day).isdecimal():
+                        # swap out month and day if necessary
+                        month, day = day, month
 
                 print(page.title(), year, month, day)
-                entry = self.get_archive_section(year, month, day, page)
+
+                if entry is None:
+                    entry = self.get_entry_for_page(year, month, day, page)
 
                 if entry:
-                    summary = "missing_blurb_edit_summary"
                     template.add("entry", entry)
+            elif template.name.matches('ArticleHistory') or template.name.matches('Article history'):
+                if year is None:
+                    if not template.has('dykdate'):
+                        print("Skipping {{ArticleHistory}} on page", page, ", no date found")
+                        continue
+                    day, month, year = template.get('dykdate').split(' ')
 
-                    print(page.title(as_link=True), str(template))
+                if entry is None:
+                    entry = self.get_entry_for_page(day, month, year, page)
 
-                    if self.should_edit() and (not self.is_manual_run or confirm_edit()):
-                        self.get_mediawiki_api().get_site().login()
-                        page.text = str(parsed)
+                if entry:
+                    template.add("dykentry", entry)
 
-                        page.save(self.get_task_configuration(summary), botflag=self.should_use_bot_flag())
-                        self.record_trial_edit()
-                        return True
+        if entry:
+            if self.should_edit() and (not self.is_manual_run or confirm_edit()):
+                self.get_mediawiki_api().get_site().login()
+                page.text = str(parsed)
+
+                page.save(self.get_task_configuration('missing_blurb_edit_summary'), botflag=self.should_use_bot_flag())
+                self.record_trial_edit()
+                return True
         return False
 
     def run(self):
