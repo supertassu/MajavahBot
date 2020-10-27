@@ -5,6 +5,7 @@ from pywikibot import Page, PageRelatedError
 from functools import lru_cache
 import mwparserfromhell
 import traceback
+import datetime
 import re
 
 
@@ -40,7 +41,7 @@ where
         from templatelinks
         where tl_from = page_id
         and tl_namespace = 10
-        and (tl_title = 'ArticleHistory' or tl_title = 'Article history')
+        and (tl_title = 'Dyktalk' or tl_title = 'DYK talk')
     )
 order by page_title
 limit 100;
@@ -114,7 +115,16 @@ class DykEntryTalkTask(Task):
                     if not template.has('dykdate'):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
                         continue
-                    day, month, year = template.get('dykdate').value.strip().split(' ')
+                    date = template.get('dykdate').value.strip()
+
+                    if date.contains(' '):
+                        day, month, year = date.split(' ')
+                    elif date.contains('-'):
+                        year, month, day = date.split('-')
+                        month = datetime.date(1900, int(month), 1).strftime('%B')
+                    else:
+                        print("Skipping {{ArticleHistory}} on page", page, ", can't parse date", date)
+                        continue
                 print(page.title(), year, month, day)
 
                 if entry is None:
