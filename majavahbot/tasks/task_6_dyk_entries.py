@@ -93,7 +93,6 @@ class DykEntryTalkTask(Task):
                     if str(month).isdecimal() and not str(day).isdecimal():
                         # swap out month and day if necessary
                         month, day = day, month
-
                 print(page.title(), year, month, day)
 
                 if entry is None:
@@ -107,9 +106,10 @@ class DykEntryTalkTask(Task):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
                         continue
                     day, month, year = template.get('dykdate').value.split(' ')
+                print(page.title(), year, month, day)
 
                 if entry is None:
-                    entry = self.get_entry_for_page(day, month, year, page)
+                    entry = self.get_entry_for_page(year, month, day, page)
 
                 if entry:
                     template.add("dykentry", entry)
