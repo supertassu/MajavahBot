@@ -41,7 +41,7 @@ where
         from templatelinks
         where tl_from = page_id
         and tl_namespace = 10
-        and (tl_title = 'Dyktalk' or tl_title = 'DYK talk')
+        and (tl_title = 'Article history' or tl_title = 'ArticleHistory')
     )
 order by page_title
 limit 100;
@@ -110,7 +110,7 @@ class DykEntryTalkTask(Task):
 
                 if entry:
                     template.add("entry", entry)
-            elif (template.name.matches('ArticleHistory') or template.name.matches('Article history')) and not template.has('deyentry'):
+            elif (template.name.matches('ArticleHistory') or template.name.matches('Article history')) and not template.has('dykentry'):
                 if year is None:
                     if not template.has('dykdate'):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
@@ -131,7 +131,7 @@ class DykEntryTalkTask(Task):
                     entry = self.get_entry_for_page(year, month, day, page)
 
                 if entry:
-                    template.add("dykentry", entry)
+                    template.add("dykentry", entry, before="dykdate")
 
         if entry:
             if self.should_edit() and (not self.is_manual_run or confirm_edit()):
