@@ -117,9 +117,9 @@ class DykEntryTalkTask(Task):
                         continue
                     date = template.get('dykdate').value.strip()
 
-                    if date.contains(' '):
+                    if ' ' in date:
                         day, month, year = date.split(' ')
-                    elif date.contains('-'):
+                    elif '-' in date:
                         year, month, day = date.split('-')
                         month = datetime.date(1900, int(month), 1).strftime('%B')
                     else:
