@@ -1,9 +1,10 @@
 from majavahbot.api.database import ReplicaDatabase
 from majavahbot.api.manual_run import confirm_edit
 from majavahbot.tasks import Task, task_registry
+from pywikibot import Page, PageRelatedError
 from functools import lru_cache
-from pywikibot import Page
 import mwparserfromhell
+import traceback
 import re
 
 
@@ -58,7 +59,11 @@ class DykEntryTalkTask(Task):
             month = month[:-1]
 
         archive_page_name = "Wikipedia:Recent additions/" + str(year) + "/" + str(month)
-        return self.get_mediawiki_api().get_page(archive_page_name).get()
+        try:
+            return self.get_mediawiki_api().get_page(archive_page_name).get()
+        except PageRelatedError:
+            traceback.print_exc()
+            return ''
 
     def get_entry_for_page(self, year, month, day, page: Page):
         search_entry = "'''[[" + page.title(with_ns=False)
@@ -85,7 +90,7 @@ class DykEntryTalkTask(Task):
         entry = None
 
         for template in parsed.filter_templates():
-            if template.name.matches("Dyktalk") or template.name.matches("DYK talk"):
+            if (template.name.matches("Dyktalk") or template.name.matches("DYK talk")) and not template.has('entry'):
                 if year is None:
                     if (not template.has(1)) or (not template.has(2)):
                         print("Skipping {{DYK talk}} page", page, ", no date found")
@@ -103,7 +108,7 @@ class DykEntryTalkTask(Task):
 
                 if entry:
                     template.add("entry", entry)
-            elif template.name.matches('ArticleHistory') or template.name.matches('Article history'):
+            elif (template.name.matches('ArticleHistory') or template.name.matches('Article history')) and not template.has('deyentry'):
                 if year is None:
                     if not template.has('dykdate'):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
