@@ -106,7 +106,7 @@ class DykEntryTalkTask(Task):
                     if not template.has('dykdate'):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
                         continue
-                    day, month, year = template.get('dykdate').split(' ')
+                    day, month, year = template.get('dykdate').value.split(' ')
 
                 if entry is None:
                     entry = self.get_entry_for_page(day, month, year, page)
