@@ -29,6 +29,18 @@ where
         where cl_from = page_id
         and cl_to = "Pages_with_a_missing_DYK_entry"
     )
+    and exists (
+        select 1
+        from templatelinks
+        where tl_from = page_id
+    )
+    and exists (
+        select 1
+        from templatelinks
+        where tl_from = page_id
+        and tl_namespace = 10
+        and (tl_title = 'ArticleHistory' or tl_title = 'Article history')
+    )
 order by page_title
 limit 100;
 """
@@ -143,6 +155,7 @@ class DykEntryTalkTask(Task):
         print("-- Got %s pages" % (str(len(results))))
         for page_from_db in results:
             if not self.should_edit():
+                print("Can't edit anymore, done")
                 break
 
             page_id = page_from_db[0]
