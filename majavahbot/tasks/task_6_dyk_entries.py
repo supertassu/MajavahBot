@@ -62,6 +62,7 @@ class DykEntryTalkTask(Task):
         try:
             return self.get_mediawiki_api().get_page(archive_page_name).get()
         except PageRelatedError:
+            print("Failed getting for page", year, month)
             traceback.print_exc()
             return ''
 
