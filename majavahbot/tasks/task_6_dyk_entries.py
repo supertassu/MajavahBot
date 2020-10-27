@@ -84,12 +84,12 @@ class DykEntryTalkTask(Task):
         for template in parsed.filter_templates():
             if template.name.matches("Dyktalk") or template.name.matches("DYK talk"):
                 if year is None:
-                    if not template.has(1):
+                    if (not template.has(1)) or (not template.has(2)):
                         print("Skipping {{DYK talk}} page", page, ", no date found")
                         continue
 
-                    year = template.get(2)
-                    day, month = template.get(1).split(" ")
+                    year = template.get(2).value.strip()
+                    day, month = template.get(1).value.strip().split(" ")
                     if str(month).isdecimal() and not str(day).isdecimal():
                         # swap out month and day if necessary
                         month, day = day, month
@@ -105,7 +105,7 @@ class DykEntryTalkTask(Task):
                     if not template.has('dykdate'):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
                         continue
-                    day, month, year = template.get('dykdate').value.split(' ')
+                    day, month, year = template.get('dykdate').value.strip().split(' ')
                 print(page.title(), year, month, day)
 
                 if entry is None:
