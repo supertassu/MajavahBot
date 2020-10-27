@@ -54,6 +54,9 @@ class DykEntryTalkTask(Task):
 
     @lru_cache()
     def get_archive_page(self, year, month):
+        if month.endswith(','):  # for weird syntax
+            month = month[:-1]
+
         archive_page_name = "Wikipedia:Recent additions/" + str(year) + "/" + str(month)
         return self.get_mediawiki_api().get_page(archive_page_name).get()
 
