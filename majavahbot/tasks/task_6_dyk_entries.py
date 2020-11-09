@@ -49,9 +49,6 @@ class DykEntryTalkTask(Task):
 
     @lru_cache()
     def get_archive_page(self, year, month):
-        if month.endswith(','):  # for weird syntax
-            month = month[:-1]
-
         archive_page_name = "Wikipedia:Recent additions/" + str(year) + "/" + str(month)
         try:
             return self.get_mediawiki_api().get_page(archive_page_name).get()
@@ -61,6 +58,15 @@ class DykEntryTalkTask(Task):
             return ''
 
     def get_entry_for_page(self, year, month, day, page: Page):
+        # for weird syntax
+        if month.endswith(','):
+            month = month[:-1]
+        if day.endswith(','):
+            day = day[:-1]
+        if str(month).isdecimal() and not str(day).isdecimal():
+            # swap out month and day if necessary
+            month, day = day, month
+
         search_entry = "'''[[" + page.title(with_ns=False)
 
         archive_text = self.get_archive_page(year, month)
@@ -93,15 +99,13 @@ class DykEntryTalkTask(Task):
 
                     year = template.get(2).value.strip()
                     day, month = template.get(1).value.strip().split(" ")
-                    if str(month).isdecimal() and not str(day).isdecimal():
-                        # swap out month and day if necessary
-                        month, day = day, month
                 print(page.title(), year, month, day)
 
                 if entry is None:
                     entry = self.get_entry_for_page(year, month, day, page)
 
                 if entry:
+                    print("Adding entry", entry, "to {{DYK talk}}")
                     template.add("entry", entry)
             elif (template.name.matches('ArticleHistory') or template.name.matches('Article history')) and not template.has('dykentry'):
                 if year is None:
@@ -124,10 +128,12 @@ class DykEntryTalkTask(Task):
                     entry = self.get_entry_for_page(year, month, day, page)
 
                 if entry:
+                    print("Adding entry", entry, "to {{ArticleHistory}}")
                     template.add("dykentry", entry, before="dykdate")
 
         if entry:
-            if self.should_edit() and (not self.is_manual_run or confirm_edit()):
+            new_text = str(parsed)
+            if new_text != page.text and self.should_edit() and (not self.is_manual_run or confirm_edit()):
                 self.get_mediawiki_api().get_site().login()
                 page.text = str(parsed)
 
