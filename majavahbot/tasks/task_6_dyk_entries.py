@@ -36,13 +36,6 @@ where
         from templatelinks
         where tl_from = page_id
     )
-    and exists (
-        select 1
-        from templatelinks
-        where tl_from = page_id
-        and tl_namespace = 10
-        and (tl_title = 'Article history' or tl_title = 'ArticleHistory')
-    )
 order by page_title
 limit 100;
 """
