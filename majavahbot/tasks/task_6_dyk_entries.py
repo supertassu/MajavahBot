@@ -20,7 +20,7 @@ from page
 where
     page_namespace = 1
     and page_title not in (
-        select 1
+        select pl_title
         from pagelinks
         where pl_from = 65539331 -- User:MajavahBot/DYK blurb not found
         and pl_namespace = 1
@@ -186,9 +186,11 @@ class DykEntryTalkTask(Task):
                 continue
             # :( not found :(
 
-            if page.title() in log_page.text:
+            if page.title(as_link=True) in log_page.text:
+                print("found; ", page.title())
                 continue
 
+            # print("\n* " + page.title(as_link=True) + ". Checked ~~~~~")
             log_page.text += "\n* " + page.title(as_link=True) + ". Checked ~~~~~"
 
             log_counter += 1
