@@ -115,9 +115,9 @@ class DykEntryTalkTask(Task):
                     date = template.get('dykdate').value.strip()
 
                     if ' ' in date:
-                        day, month, year = date.split(' ')
+                        day, month, year = date.split(' ')[:3]
                     elif '-' in date:
-                        year, month, day = date.split('-')
+                        year, month, day = date.split('-')[:3]
                         month = datetime.date(1900, int(month), 1).strftime('%B')
                     else:
                         print("Skipping {{ArticleHistory}} on page", page, ", can't parse date", date)
