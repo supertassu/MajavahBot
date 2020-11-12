@@ -107,9 +107,9 @@ class DykEntryTalkTask(Task):
                         print("Skipping {{DYK talk}} page", page, ", no date found")
                         continue
 
+                    print("*", page.title(), template.get(2), template.get(1))
                     year = template.get(2).value.strip()
                     day, month = template.get(1).value.strip().split(" ")
-                print(page.title(), year, month, day)
 
                 if entry is None:
                     entry = self.get_entry_for_page(year, month, day, page)
@@ -123,8 +123,12 @@ class DykEntryTalkTask(Task):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
                         continue
                     date = template.get('dykdate').value.strip()
+                    print("*", page.title(), date)
 
                     if ' ' in date:
+                        # monthName YYYY
+                        if date.count(' ') == 2:
+                            date = '1 ' + date
                         day, month, year = date.split(' ')[:3]
                     elif '-' in date:
                         year, month, day = date.split('-')[:3]
