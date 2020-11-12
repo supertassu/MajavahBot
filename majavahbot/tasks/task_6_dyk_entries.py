@@ -9,7 +9,7 @@ import datetime
 import re
 
 
-DATE_REGEX = re.compile(r"(\d+ [a-zA-Z]+) \d{4}")
+MOVED_REGEX = re.compile(r"(?:[a-zA-Z0-9 .]+ )?moved (?:page )?\[\[([^]]+)]] to \[\[([^]]+)]]")
 
 
 QUERY = """
@@ -67,7 +67,15 @@ class DykEntryTalkTask(Task):
             # swap out month and day if necessary
             month, day = day, month
 
-        search_entry = "'''[[" + page.title(with_ns=False)
+        search_entries = ["'''[[" + page.title(with_ns=False)]
+
+        for revision in page.revisions():
+            result = MOVED_REGEX.match(revision.comment)
+            if result is not None:
+                page_name = result.group(1)
+                this_page = self.get_mediawiki_api().get_page(page_name)
+                search_entries.append("'''[[" + this_page.title(with_ns=False))
+        print(search_entries)
 
         archive_text = self.get_archive_page(year, month)
         parsed_archive = mwparserfromhell.parse(archive_text)
@@ -75,10 +83,11 @@ class DykEntryTalkTask(Task):
 
         for section in archive_sections:
             for row in str(section).split("\n"):
-                if search_entry in row:
-                    text = row[1:]  # remove * from beginning
-                    # you could check dates here, if wanted - please don't for now, see BRFA for more details
-                    return text
+                for search_entry in search_entries:
+                    if search_entry in row:
+                        text = row[1:]  # remove * from beginning
+                        # you could check dates here, if wanted - please don't for now, see BRFA for more details
+                        return text
         return False
 
     def process_page(self, page: Page):
