@@ -66,7 +66,7 @@ class DykEntryTalkTask(Task):
         if str(month).isdecimal() and not str(day).isdecimal():
             # swap out month and day if necessary
             month, day = day, month
-        if day > 2000:
+        if len(day) == 4:
             day, year = year, day
 
         search_entries = ["'''[[" + page.title(with_ns=False).lower()]
