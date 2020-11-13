@@ -19,12 +19,6 @@ select
 from page
 where
     page_namespace = 1
-    and page_title not in (
-        select pl_title
-        from pagelinks
-        where pl_from = 65539331 -- User:MajavahBot/DYK blurb not found
-        and pl_namespace = 1
-    )
     and exists (
         select 1
         from categorylinks
@@ -37,7 +31,7 @@ where
         where tl_from = page_id
     )
 order by page_title
-limit 100;
+limit 1000;
 """
 
 
@@ -69,9 +63,10 @@ class DykEntryTalkTask(Task):
         if len(day) == 4:
             day, year = year, day
 
-        search_entries = ["'''[[" + page.title(with_ns=False).lower()]
+        main_page = page.toggleTalkPage()
+        search_entries = ["'''[[" + main_page.title(with_ns=False).lower()]
 
-        for revision in page.revisions():
+        for revision in main_page.revisions():
             result = MOVED_REGEX.match(revision.comment)
             if result is not None:
                 page_name = result.group(1)
@@ -100,7 +95,7 @@ class DykEntryTalkTask(Task):
         entry = None
 
         for template in parsed.filter_templates():
-            if (template.name.matches("Dyktalk") or template.name.matches("DYK talk")) and not template.has('entry'):
+            if (template.name.matches("Dyktalk") or template.name.matches("DYK talk")) and (not template.has('entry') or len(template.get('entry').value) == 0):
                 if year is None:
                     if (not template.has(1)) or (not template.has(2)):
                         print("Skipping {{DYK talk}} page", page, ", no date found")
@@ -116,7 +111,7 @@ class DykEntryTalkTask(Task):
                 if entry:
                     print("Adding entry", entry, "to {{DYK talk}}")
                     template.add("entry", entry)
-            elif (template.name.matches('ArticleHistory') or template.name.matches('Article history')) and not template.has('dykentry'):
+            elif (template.name.matches('ArticleHistory') or template.name.matches('Article history')) and (not template.has('dykentry') or len(template.get('dykentry').value) == 0):
                 if year is None:
                     if not template.has('dykdate'):
                         print("Skipping {{ArticleHistory}} on page", page, ", no date found")
@@ -158,11 +153,7 @@ class DykEntryTalkTask(Task):
     def run(self):
         self.merge_task_configuration(
             missing_blurb_enable=True,
-
             missing_blurb_edit_summary="[[WP:Bots/Requests for approval/MajavahBot 4|Bot]]: Fill missing DYK blurb",
-
-            missing_blurb_log_page="User:MajavahBot/DYK blurb not found",
-            missing_blurb_log_summary="[[WP:Bots/Requests for approval/MajavahBot 4|Bot]]: Update log for DYK blurbs that were not found"
         )
 
         if self.get_task_configuration("missing_blurb_enable") is not True:
@@ -171,9 +162,6 @@ class DykEntryTalkTask(Task):
 
         api = self.get_mediawiki_api()
         site = api.get_site()
-
-        log_page = api.get_page(self.get_task_configuration("missing_blurb_log_page"))
-        log_counter = 0
 
         replicadb = ReplicaDatabase(site.dbName())
 
@@ -195,23 +183,7 @@ class DykEntryTalkTask(Task):
             page = api.get_page("Talk:" + page_name)
             assert page.pageid == page_id
 
-            if self.process_page(page):
-                continue
-            # :( not found :(
-
-            if page.title(as_link=True) in log_page.text:
-                print("found; ", page.title())
-                continue
-
-            # print("\n* " + page.title(as_link=True) + ". Checked ~~~~~")
-            log_page.text += "\n* " + page.title(as_link=True) + ". Checked ~~~~~"
-
-            log_counter += 1
-            if log_counter > 25:
-                log_page.save(self.get_task_configuration("missing_blurb_log_summary"), botflag=self.should_use_bot_flag())
-                log_counter = 0
-        if log_counter > 0:
-            log_page.save(self.get_task_configuration("missing_blurb_log_summary"), botflag=self.should_use_bot_flag())
+            self.process_page(page)
 
 
 task_registry.add_task(DykEntryTalkTask(6, "DYK entry filler", "en", "wikipedia"))
