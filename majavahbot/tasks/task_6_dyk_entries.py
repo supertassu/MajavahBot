@@ -90,7 +90,7 @@ class DykEntryTalkTask(Task):
                 old_name = result.group(1)
                 old_page = self.get_mediawiki_api().get_page(old_name)
                 search_entries.append("'''[[" + old_page.title().lower())
-        for incoming_redirect in page.backlinks(filter_redirects=True, namespaces=[0]):
+        for incoming_redirect in main_page.backlinks(filter_redirects=True, follow_redirects=False, namespaces=[0]):
             search_entries.append("'''[[" + incoming_redirect.title().lower())
 
         print(search_entries)
