@@ -80,17 +80,14 @@ class DykEntryTalkTask(Task):
         print(search_entries)
 
         archive_text = self.get_archive_page(year, month)
-        parsed_archive = mwparserfromhell.parse(archive_text)
-        archive_sections = parsed_archive.get_sections(levels=[3])
 
-        for section in archive_sections:
-            for row in str(section).split("\n"):
-                row_lower = row.lower()
-                for search_entry in search_entries:
-                    if search_entry in row_lower:
-                        text = row[1:]  # remove * from beginning
-                        # you could check dates here, if wanted - please don't for now, see BRFA for more details
-                        return text
+        for row in str(archive_text).split("\n"):
+            row_lower = row.lower()
+            for search_entry in search_entries:
+                if search_entry in row_lower:
+                    text = row[1:]  # remove * from beginning
+                    # you could check dates here, if wanted - please don't for now, see BRFA for more details
+                    return text
         return False
 
     def process_page(self, page: Page):
