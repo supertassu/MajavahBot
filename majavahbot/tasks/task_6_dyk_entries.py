@@ -35,6 +35,22 @@ limit 1000;
 """
 
 
+MONTH_REPLACEMENTS = {
+    "Jan": "January",
+    "Feb": "February",
+    "Mar": "March",
+    "Apr": "April",
+    "May": "May",
+    "Jun": "June",
+    "Jul": "July",
+    "Aug": "August",
+    "Sep": "September",
+    "Oct": "October",
+    "Nov": "November",
+    "Dec": "December"
+}
+
+
 class DykEntryTalkTask(Task):
     def __init__(self, number, name, site, family):
         super().__init__(number, name, site, family)
@@ -62,16 +78,21 @@ class DykEntryTalkTask(Task):
             month, day = day, month
         if len(day) == 4:
             day, year = year, day
+        if month in MONTH_REPLACEMENTS.keys():
+            month = MONTH_REPLACEMENTS[month]
 
         main_page = page.toggleTalkPage()
-        search_entries = ["'''[[" + main_page.title(with_ns=False).lower()]
+        search_entries = ["'''[[" + main_page.title().lower()]
 
         for revision in main_page.revisions():
             result = MOVED_REGEX.match(revision.comment)
             if result is not None:
-                page_name = result.group(1)
-                this_page = self.get_mediawiki_api().get_page(page_name)
-                search_entries.append("'''[[" + this_page.title(with_ns=False).lower())
+                old_name = result.group(1)
+                old_page = self.get_mediawiki_api().get_page(old_name)
+                search_entries.append("'''[[" + old_page.title().lower())
+        for incoming_redirect in page.backlinks(filter_redirects=True, namespaces=[0]):
+            search_entries.append("'''[[" + incoming_redirect.title().lower())
+
         print(search_entries)
 
         archive_text = self.get_archive_page(year, month)
