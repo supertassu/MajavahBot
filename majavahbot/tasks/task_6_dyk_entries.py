@@ -57,7 +57,7 @@ NAME_REPLACEMENTS = {
         r"[[\g<1> \g<2> (\g<3>)]]",
 }
 
-for name in ["HMS", "HMAS", "HMT", "SMS", "SS", "USAT", "USS"]:
+for name in ["hms", "hmas", "hmt", "sms", "ss", "usat", "uss"]:
     NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z0-9\- ]+)}}")] = r"[[" + name + r" \g<1>]]"
     NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z0-9\- ]+)\|([a-zA-Z0-9\- ]+)(\|[0-9]+)?}}")] \
         = r"[[" + name + r" \g<1> (\g<2>)]]"
@@ -73,10 +73,7 @@ class DykEntryTalkTask(Task):
     def get_archive_page(self, year, month):
         archive_page_name = "Wikipedia:Recent additions/" + str(year) + "/" + str(month)
         try:
-            text = self.get_mediawiki_api().get_page(archive_page_name).get()
-            for regex in NAME_REPLACEMENTS:
-                text = regex.sub(NAME_REPLACEMENTS[regex], text)
-            return text
+            return self.get_mediawiki_api().get_page(archive_page_name).get()
         except PageRelatedError:
             print("Failed getting for page", year, month)
             traceback.print_exc()
@@ -113,9 +110,11 @@ class DykEntryTalkTask(Task):
         archive_text = self.get_archive_page(year, month)
 
         for row in str(archive_text).split("\n"):
-            row_lower = row.lower()
+            row_to_search = row.lower()
+            for regex in NAME_REPLACEMENTS:
+                row_to_search = regex.sub(NAME_REPLACEMENTS[regex], row_to_search)
             for search_entry in search_entries:
-                if search_entry in row_lower:
+                if search_entry in row_to_search:
                     text = row[1:]  # remove * from beginning
                     # you could check dates here, if wanted - please don't for now, see BRFA for more details
                     return text
