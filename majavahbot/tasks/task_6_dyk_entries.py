@@ -51,6 +51,14 @@ MONTH_REPLACEMENTS = {
 }
 
 
+NAME_REPLACEMENTS = {}
+
+for name in ["HMS", "HMAS", "HMT", "SMS", "SS", "USAT", "USS"]:
+    NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z ]+)}}")] = r"[[" + name + r" \g<1>]]"
+    NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z ]+)\|([0-9]+)(\|[0-9]+)?}}")] \
+        = r"[[" + name + r" \g<1> (\g<2>)]]"
+
+
 class DykEntryTalkTask(Task):
     def __init__(self, number, name, site, family):
         super().__init__(number, name, site, family)
@@ -61,7 +69,10 @@ class DykEntryTalkTask(Task):
     def get_archive_page(self, year, month):
         archive_page_name = "Wikipedia:Recent additions/" + str(year) + "/" + str(month)
         try:
-            return self.get_mediawiki_api().get_page(archive_page_name).get()
+            text = self.get_mediawiki_api().get_page(archive_page_name).get()
+            for regex in NAME_REPLACEMENTS:
+                text = regex.sub(NAME_REPLACEMENTS[regex], text)
+            return text
         except PageRelatedError:
             print("Failed getting for page", year, month)
             traceback.print_exc()
