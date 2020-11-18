@@ -51,11 +51,15 @@ MONTH_REPLACEMENTS = {
 }
 
 
-NAME_REPLACEMENTS = {}
+NAME_REPLACEMENTS = {
+    re.compile(r"{{(?:Ship|Warship)\|([a-zA-Z0-9\- ]+)\|([a-zA-Z0-9\- ]+)}}"): r"[[\g<1> \g<2>]]",
+    re.compile(r"{{(?:Ship|Warship)\|([a-zA-Z0-9\- ]+)\|([a-zA-Z0-9\- ]+)\|([a-zA-Z0-9\- ]+)}}"):
+        r"[[\g<1> \g<2> (\g<3>)]]",
+}
 
 for name in ["HMS", "HMAS", "HMT", "SMS", "SS", "USAT", "USS"]:
-    NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z ]+)}}")] = r"[[" + name + r" \g<1>]]"
-    NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z ]+)\|([0-9]+)(\|[0-9]+)?}}")] \
+    NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z0-9\- ]+)}}")] = r"[[" + name + r" \g<1>]]"
+    NAME_REPLACEMENTS[re.compile(r"{{" + name + r"\|([a-zA-Z0-9\- ]+)\|([a-zA-Z0-9\- ]+)(\|[0-9]+)?}}")] \
         = r"[[" + name + r" \g<1> (\g<2>)]]"
 
 
