@@ -80,7 +80,7 @@ class StewardRequestTask(Task):
                     for param in template.params:
                         if not param.can_hide_key(param.name):
                             continue
-                        param_text = param.value.strip_code()
+                        param_text = param.value.strip_code().strip()
                         if len(param_text) == 0:
                             continue
                         try:
