@@ -5,6 +5,7 @@ from majavahbot.config import steward_request_bot_config_page
 from majavahbot.tasks import Task, task_registry
 from pywikibot.data.api import QueryGenerator
 import mwparserfromhell
+import ipaddress
 
 
 class StewardRequestTask(Task):
@@ -75,22 +76,18 @@ class StewardRequestTask(Task):
             for template in section.filter_templates():
                 if template.name.matches('status'):
                     status = template
-                elif template.name.matches('LockHide') or template.name.matches('MultiLock'):
+                elif template.name.matches('LockHide') or template.name.matches('MultiLock') or template.name.matches('Luxotool'):
                     for param in template.params:
                         if not param.can_hide_key(param.name):
                             continue
                         param_text = param.value.strip_code()
                         if len(param_text) == 0:
                             continue
-                        accounts.append(param_text)
-                elif template.name.matches('Luxotool'):
-                    for param in template.params:
-                        if not param.can_hide_key(param.name):
-                            continue
-                        param_text = param.value.strip_code()
-                        if len(param_text) == 0:
-                            continue
-                        ips.append(param_text)
+                        try:
+                            ipaddress.ip_address(param_text)
+                            ips.append(param_text)
+                        except ValueError:
+                            accounts.append(param_text)
 
             # status already has a value, assuming this has already been processed
             if (not status) or (status.has(1) and len(status.get(1).value) > 0):
