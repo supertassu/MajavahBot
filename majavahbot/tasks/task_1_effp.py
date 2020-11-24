@@ -309,8 +309,9 @@ class EffpTask(Task):
 
         print("Now listening for EFFPR edits")
         for change in self.stream:
-            if '!nobot!' not in change['comment']:
-                self.process_page(self.get_task_configuration('reports_page'), api)
+            if '!nobot!' in change['comment'] or 'Reverted edits' in change['comment']:
+                continue
+            self.process_page(self.get_task_configuration('reports_page'), api)
         print("EventStream dried")  # auto restart?
 
     def task_configuration_reloaded(self, old, new):
