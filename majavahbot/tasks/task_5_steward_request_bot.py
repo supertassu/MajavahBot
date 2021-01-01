@@ -84,7 +84,7 @@ class StewardRequestTask(Task):
                         if len(param_text) == 0:
                             continue
 
-                        validate_text: str = param_text
+                        validate_text = param_text
                         if validate_text.count('/') == 1:
                             first, second = validate_text.split('/')
 
