@@ -83,8 +83,18 @@ class StewardRequestTask(Task):
                         param_text = param.value.strip_code().strip()
                         if len(param_text) == 0:
                             continue
+
+                        validate_text: str = param_text
+                        if validate_text.count('/') == 1:
+                            first, second = validate_text.split('/')
+
+                            # if the part after the slash is numeric, check if the part before is an ip
+                            # so CIDR ranges are checked if they are globally blocked instead of locked
+                            if second.isdigit():
+                                validate_text = first
+
                         try:
-                            ipaddress.ip_address(param_text)
+                            ipaddress.ip_address(validate_text)
                             ips.append(param_text)
                         except ValueError:
                             accounts.append(param_text)
