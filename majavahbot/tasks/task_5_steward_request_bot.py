@@ -76,7 +76,7 @@ class StewardRequestTask(Task):
             for template in section.filter_templates():
                 if template.name.matches('status'):
                     status = template
-                elif template.name.matches('LockHide') or template.name.matches('MultiLock') or template.name.matches('Luxotool'):
+                elif template.name.matches('LockHide') or template.name.matches('MultiLock') or template.name.matches('Multilock') or template.name.matches('Luxotool'):
                     for param in template.params:
                         if not param.can_hide_key(param.name):
                             continue
