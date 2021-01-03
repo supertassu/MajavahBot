@@ -91,7 +91,10 @@ class StewardRequestTask(Task):
                             # if the part after the slash is numeric, check if the part before is an ip
                             # so CIDR ranges are checked if they are globally blocked instead of locked
                             if second.isdigit():
-                                validate_text = first
+                                # since some people suggest blocking ranges larger than /16, don't crash
+                                second = int(second)
+                                if second > 16:
+                                    validate_text = first
 
                         try:
                             ipaddress.ip_address(validate_text)
