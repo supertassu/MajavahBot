@@ -15,10 +15,11 @@ class StewardRequestTask(Task):
         self.supports_manual_run = True
 
     def get_steward_who_gblocked_ip(self, api: MediawikiApi, ip_or_range):
-        data = QueryGenerator(site=api.get_site(),
-                              list="globalblocks",
-                              bgip=ip_or_range,
-                              ).request.submit()['query']['globalblocks']
+        data = QueryGenerator(
+            site=api.get_site(),
+            list='globalblocks',
+            bgip=ip_or_range,
+        ).request.submit()['query']['globalblocks']
         if len(data) == 0:
             return None
 
@@ -28,13 +29,14 @@ class StewardRequestTask(Task):
         return data[0]['by']
 
     def get_steward_who_locked_account(self, api: MediawikiApi, account_name):
-        data = QueryGenerator(site=api.get_site(),
-                              list="logevents",
-                              letype="globalauth",
-                              letitle="User:" + account_name + "@global"
-                              ).request.submit()['query']['logevents']
+        data = QueryGenerator(
+            site=api.get_site(),
+            list='logevents',
+            letype='globalauth',
+            letitle='User:' + account_name + '@global',
+        ).request.submit()['query']['logevents']
 
-        if len(data) == 0 or "locked" not in data[0]['params']['0']:
+        if len(data) == 0 or 'locked' not in data[0]['params']['0']:
             return None
 
         if not was_enough_time_ago(data[0]['timestamp'], self.get_task_configuration('time_min')):
@@ -45,13 +47,13 @@ class StewardRequestTask(Task):
     def run(self):
         self.merge_task_configuration(
             run=True,
-            page="Steward requests/Global",
-            summary="BOT: Marking done requests as done",
-            time_min=5*60
+            page='Steward requests/Global',
+            summary='BOT: Marking done requests as done',
+            time_min=5 * 60,
         )
 
-        if self.get_task_configuration("run") is not True:
-            print("Disabled in configuration")
+        if self.get_task_configuration('run') is not True:
+            print('Disabled in configuration')
             return
 
         api = self.get_mediawiki_api()
@@ -62,8 +64,10 @@ class StewardRequestTask(Task):
 
         for section in sections:
             header = section.filter_headings()[0]
-            if ("unlock" in header and "/unlock" not in header) or ("unblock" in header and "/unblock" not in header):
-                print("Assuming section", header, " is a un(b)lock request, skipping")
+            if ('unlock' in header and '/unlock' not in header) or (
+                'unblock' in header and '/unblock' not in header
+            ):
+                print('Assuming section', header, ' is a un(b)lock request, skipping')
                 continue
 
             status = None
@@ -76,7 +80,12 @@ class StewardRequestTask(Task):
             for template in section.filter_templates():
                 if template.name.matches('status'):
                     status = template
-                elif template.name.matches('LockHide') or template.name.matches('MultiLock') or template.name.matches('Multilock') or template.name.matches('Luxotool'):
+                elif (
+                    template.name.matches('LockHide')
+                    or template.name.matches('MultiLock')
+                    or template.name.matches('Multilock')
+                    or template.name.matches('Luxotool')
+                ):
                     for param in template.params:
                         if not param.can_hide_key(param.name):
                             continue
@@ -104,7 +113,7 @@ class StewardRequestTask(Task):
 
             # status already has a value, assuming this has already been processed
             if (not status) or (status.has(1) and len(status.get(1).value) > 0):
-                print("Section has non-ok status", status, accounts, ips)
+                print('Section has non-ok status', status, accounts, ips)
                 continue
 
             mark_done = True
@@ -128,20 +137,26 @@ class StewardRequestTask(Task):
                 continue
 
             # remove duplicates
-            awesome_people = ", ".join(list(dict.fromkeys(awesome_people)))
+            awesome_people = ', '.join(list(dict.fromkeys(awesome_people)))
 
             if mark_done:
                 status.add(1, 'done')
-                section.append(": '''Robot clerk note:''' {{done}} by " + awesome_people + ". ~~~~\n")
-                print("Marking as done", awesome_people, status, ips, accounts)
+                section.append(
+                    ": '''Robot clerk note:''' {{done}} by " + awesome_people + '. ~~~~\n'
+                )
+                print('Marking as done', awesome_people, status, ips, accounts)
 
         new_text = str(parsed)
         new_text = remove_empty_lines_before_replies(new_text)
 
-        if new_text != page_text and self.should_edit() and (not self.is_manual_run or confirm_edit()):
+        if (
+            new_text != page_text
+            and self.should_edit()
+            and (not self.is_manual_run or confirm_edit())
+        ):
             api.site.login()
             page.text = new_text
-            page.save(self.get_task_configuration("summary"), botflag=self.should_use_bot_flag())
+            page.save(self.get_task_configuration('summary'), botflag=self.should_use_bot_flag())
             self.record_trial_edit()
 
 

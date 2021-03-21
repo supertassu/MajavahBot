@@ -4,7 +4,7 @@ import dateparser
 from pywikibot.data import api
 from pywikibot.comms.eventstreams import EventStreams, site_rc_listener
 
-SIGNATURE_TIME_REGEX = re.compile(r"\d\d:\d\d, \d{1,2} \w*? \d\d\d\d \(UTC\)")
+SIGNATURE_TIME_REGEX = re.compile(r'\d\d:\d\d, \d{1,2} \w*? \d\d\d\d \(UTC\)')
 
 
 class MediawikiApi:
@@ -13,8 +13,11 @@ class MediawikiApi:
 
     def __repr__(self):
         self.site.login()
-        return "MediawikiApi{wiki=%s,user=%s,has_bot_flag=%s}" % (self.site.hostname(), self.site.username(),
-                                                                  'bot' in self.site.userinfo['rights'])
+        return 'MediawikiApi{wiki=%s,user=%s,has_bot_flag=%s}' % (
+            self.site.hostname(),
+            self.site.username(),
+            'bot' in self.site.userinfo['rights'],
+        )
 
     def test(self):
         return pywikibot.User(self.site, self.site.username()).exists()
@@ -38,10 +41,17 @@ class MediawikiApi:
         return stream
 
     def get_last_abuse_filter_trigger(self, user: str):
-        """Retrieves latest Special:AbuseLog entry for specified user."""
+        '''Retrieves latest Special:AbuseLog entry for specified user.'''
         self.site.login()
-        request = api.Request(self.site, action="query", list="abuselog", afluser=user, afldir="older", afllimit="1",
-                              aflprop="ids|user|title|action|result|timestamp|filter|details")
+        request = api.Request(
+            self.site,
+            action='query',
+            list='abuselog',
+            afluser=user,
+            afldir='older',
+            afllimit='1',
+            aflprop='ids|user|title|action|result|timestamp|filter|details',
+        )
         response = request.submit()['query']['abuselog']
         if len(response) > 0:
             return response[0]
@@ -49,8 +59,15 @@ class MediawikiApi:
 
     def is_filter_private(self, filter_id: str) -> bool:
         self.site.login()
-        request = api.Request(self.site, action="query", list="abusefilters", abfstartid=filter_id, abfendid=filter_id,
-                              abflimit=1, abfshow="private")
+        request = api.Request(
+            self.site,
+            action='query',
+            list='abusefilters',
+            abfstartid=filter_id,
+            abfendid=filter_id,
+            abflimit=1,
+            abfshow='private',
+        )
         response = request.submit()['query']['abusefilters']
         return len(response) > 0
 
@@ -83,7 +100,7 @@ class MediawikiApi:
 mediawiki_apis = {}
 
 
-def get_mediawiki_api(site="en", family="wikipedia") -> MediawikiApi:
+def get_mediawiki_api(site='en', family='wikipedia') -> MediawikiApi:
     if family not in mediawiki_apis:
         mediawiki_apis[family] = {}
     if site not in mediawiki_apis[family]:
